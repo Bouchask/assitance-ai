@@ -1,0 +1,57 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: commercial_ai_postgres
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: commercial_ai
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d commercial_ai"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  backend:
+    build: 
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: commercial_ai_backend
+    ports:
+      - "5001:5001"
+    environment:
+      - APP_ENV=development
+      - DATABASE_URL=postgresql://user:password@postgres:5432/commercial_ai
+      - OLLAMA_BASE_URL=http://host.docker.internal:11434
+      - PORT=5001
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app/backend
+      - ./data:/app/data
+      - ./templates:/app/templates
+      # Allow docker-in-docker for latex generation (Optional: only if running linux)
+      # - /var/run/docker.sock:/var/run/docker.sock
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: commercial_ai_frontend
+    ports:
+      - "5173:5173"
+    environment:
+      - BACKEND_URL=http://backend:5001
+    depends_on:
+      - backend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+
+volumes:
+  postgres_data:

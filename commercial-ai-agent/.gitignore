@@ -1,0 +1,48 @@
+# =========================
+# Mac OS
+# =========================
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# =========================
+# Python / Backend
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+backend/venv/
+backend/.env
+backend/commercial.db
+
+# =========================
+# Node / Frontend
+# =========================
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.env
+frontend/.env.local
+frontend/.env.*.local
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+
+# =========================
+# IDEs and Editors
+# =========================
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# =========================
+# Project Specific (Data)
+# =========================
+data/*.pdf
+data/*.db
+data/*.sqlite
+data/*.sqlite3
+commercial.db

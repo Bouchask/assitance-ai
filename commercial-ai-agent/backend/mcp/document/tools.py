@@ -1,0 +1,94 @@
+from typing import Dict, Any, Optional
+import os
+import uuid
+from backend.services.latex_service import LatexService
+from backend.services.document_validation import DocumentValidator
+from backend.database.connection import SessionLocal
+from backend.models.client import Client
+from backend.models.document import Document
+
+def generate_document(
+    document_type: str,
+    client_name: str,
+    items: list,
+    total_ht: float,
+    tax: float,
+    total_ttc: float,
+    original_subtotal: float = 0.0,
+    discount_amount: float = 0.0,
+    discount_percent_val: float = 0.0,
+    template_name: str = "b2b",
+    additional_context: Optional[Dict[str, Any]] = None,
+    client_id: Optional[int] = None,
+    reference_id: Optional[int] = None,
+) -> Dict[str, Any]:
+    """Generate a document (PDF) based on structured content."""
+    if document_type != "quote":
+        raise ValueError("Only quote documents are available in this MVP.")
+    if template_name != "b2b":
+        raise ValueError("Unsupported document template.")
+    
+    # We will use the LaTeX service to render and compile the document
+    # and return the generated filepath or ID
+    
+    context = {
+        "client_name": client_name,
+        "items": items,
+        "subtotal": total_ht,
+        "original_subtotal": original_subtotal,
+        "discount_amount": discount_amount,
+        "discount_percent_val": discount_percent_val,
+        "tax": tax,
+        "total": total_ttc,
+        "document_number": f"{document_type[:3].upper()}-{str(uuid.uuid4())[:8]}"
+    }
+    
+    if additional_context:
+        context.update(additional_context)
+        
+    latex_service = LatexService()
+    
+    # 1. Render template
+    tex_content = latex_service.render_template(document_type, template_name, context)
+    
+    # 2. Compile to PDF
+    pdf_path = latex_service.compile_pdf(tex_content, document_type)
+    
+    # 3. Validate
+    is_valid, error = DocumentValidator.validate_pdf(pdf_path, context)
+    if not is_valid:
+        raise RuntimeError(f"Document generation failed validation: {error}")
+        
+    # Record the generated artifact so the quote remains traceable after the
+    # execution process has finished.
+    db = SessionLocal()
+    try:
+        resolved_client_id = int(client_id) if client_id is not None else None
+        if resolved_client_id is None:
+            client = db.query(Client).filter(Client.name == client_name).first()
+            resolved_client_id = client.id if client else None
+        if resolved_client_id is None:
+            raise ValueError("A generated document must be linked to an existing client.")
+        document = Document(
+            filename=os.path.basename(pdf_path),
+            filepath=pdf_path,
+            document_type=document_type,
+            reference_id=int(reference_id) if reference_id is not None else None,
+            client_id=resolved_client_id,
+        )
+        db.add(document)
+        db.commit()
+        db.refresh(document)
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
+
+    return {
+        "success": True,
+        "file_path": pdf_path,
+        "document_type": document_type,
+        "document_number": context["document_number"],
+        "document_id": document.id,
+    }

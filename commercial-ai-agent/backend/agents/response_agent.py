@@ -1,0 +1,41 @@
+import json
+from typing import Dict, Any, List
+from backend.llm.router import ModelRouter
+
+class ResponseAgent:
+    def __init__(self, router: ModelRouter):
+        self.router = router
+        self.system_prompt = """
+        You are the Response Agent for a Commercial AI Agent.
+        Your task is to take the execution results of an action plan and generate a concise, professional response to the user.
+        
+        DO NOT expose internal implementation details, such as raw SQL queries, API keys, MCP tool names (e.g. "db.search_client"), or stack traces.
+        DO NOT invent numbers. Use the exact totals and file names provided in the execution results.
+        
+        If there was an error, explain it politely and simply, and tell the user what succeeded before the error occurred.
+        
+        Use the language of the initial user request, or French if uncertain, as this is a Moroccan/French context (MAD currency).
+        """
+
+    def generate_response(self, user_request: str, execution_results: Dict[str, Any]) -> str:
+        """
+        Generates a professional text response to the user based on tool execution results.
+        """
+        results_str = json.dumps(execution_results, indent=2)
+        
+        prompt = f"""
+        User Request:
+        {user_request}
+        
+        Execution Results:
+        {results_str}
+        
+        Generate the final response to the user based on these results.
+        """
+        
+        # We use general_multimodal or commercial_reasoning capability for writing professional responses
+        return self.router.generate(
+            capability="commercial_reasoning",
+            prompt=prompt,
+            system_prompt=self.system_prompt
+        )
