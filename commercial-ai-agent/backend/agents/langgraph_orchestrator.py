@@ -77,15 +77,36 @@ class LangGraphOrchestrator:
     def _node_analyze(self, state: AgentState):
         if state.get("intent"):
             return state
-        intent = self.prompt_engineer.analyze(state["user_input"])
+            
+        previous_context = ""
+        results = state.get("results", {})
+        if results:
+            previous_context = "Here is what was accomplished in previous steps of this conversation:\n"
+            for step_id, res in results.items():
+                if res.get("success"):
+                    previous_context += f"- Step {step_id}: {res.get('data', {})}\n"
+                    
+        intent = self.prompt_engineer.analyze(state["user_input"], previous_context)
         state["intent"] = intent
         return state
 
     def _node_plan(self, state: AgentState):
         if state.get("plan"):
             return state
+            
         available_tools = registry.get_planner_tools()
-        plan = self.planner.plan(state["intent"], available_tools)
+        
+        previous_context = ""
+        results = state.get("results", {})
+        next_step_id = 1
+        if results:
+            next_step_id = max(results.keys()) + 1
+            previous_context = "Here is what was accomplished in previous steps of this conversation:\n"
+            for step_id, res in results.items():
+                if res.get("success"):
+                    previous_context += f"- Step {step_id}: {res.get('data', {})}\n"
+                    
+        plan = self.planner.plan(state["intent"], available_tools, previous_context, next_step_id)
         state["plan"] = plan
         return state
 
@@ -142,12 +163,13 @@ class LangGraphOrchestrator:
         execution_id = thread_id or str(uuid.uuid4())
         config = {"configurable": {"thread_id": execution_id}}
         
+        # Explicitly wipe the intent and plan from the state before invoking, 
+        # so that a follow-up request forces re-analysis and re-planning.
+        self.graph.update_state(config, {"intent": None, "plan": None})
+        
         initial_state = {
             "execution_id": execution_id,
             "user_input": user_input,
-            "intent": {},
-            "plan": {},
-            "results": {},
             "approved_step_ids": [],
             "status": "",
             "error": "",

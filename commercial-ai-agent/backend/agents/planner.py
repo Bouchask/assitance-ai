@@ -15,9 +15,8 @@ class PlannerAgent:
         {
             "steps": [
                 {
-                    "id": 1,
-                    "tool": "tool_name",
-                    "arguments": {
+                    "id": "integer (sequential step ID, starting from the NEXT available ID requested by the user)",
+                    "tool": "string (name of the tool to use)",                "arguments": {
                         "arg_name": "arg_value"
                     },
                     "depends_on": [] 
@@ -31,7 +30,8 @@ class PlannerAgent:
         - For clients: ALWAYS use "db.find_or_create_client" (NOT "db.search_client"). It guarantees a client with an "id" is returned.
         - For emails: ONLY use email tools if the user explicitly requested to send an email or if an email address is provided. If used, ALWAYS use "email.prepare" first, then "email.send" (NEVER "email.generate").
         - To prepare quote lines and handle discounts, use "utils.prepare_quote_items" instead of multiple calculate steps.
-        - For every quote creation, the required order is: db.find_or_create_client, utils.prepare_quote_items, db.create_quote, document.generate. Pass {{stepN.items}}, {{stepN.total_ht}}, {{stepN.tax}}, and {{stepN.total_ttc}} into db.create_quote. Pass the client id and quote id to document.generate as client_id and reference_id.
+        - For every quote creation, the required order is: db.find_or_create_client, utils.prepare_quote_items, db.create_quote, AND THEN generate the document.
+        - IMPORTANT: If the Intent specifies "document_format": "excel", use "document.generate_excel". If it specifies "pdf" or is omitted, use "document.generate". Pass {{stepN.items}}, {{stepN.total_ht}}, {{stepN.tax}} (for the total_tax argument), and {{stepN.total_ttc}} into db.create_quote. Pass the client id and quote id to the document tool as client_id and reference_id.
         - The 'requirements' field from the Intent contains objects like {"service": "SEO", "quantity": 2}. You MUST map these to valid catalogue codes (e.g. "SEO-OPT") for the 'codes' argument of 'utils.prepare_quote_items'.
         - You MUST also pass a 'quantities' dictionary (e.g. {"SEO-OPT": 2}) to 'utils.prepare_quote_items' to properly reflect the requested quantities!
         - Use only actual catalogue codes returned by the tool descriptions: WEB-ECOMM, MAINT-6, SEO-OPT. Never invent a price or a service.
@@ -46,25 +46,21 @@ class PlannerAgent:
         - For document.generate, ALWAYS omit the "template_name" argument so it uses the system default, or pass exactly "b2b" if required.
         - If 'client_email' is present in the Intent, use that exact email string for the 'email.prepare' "to" argument instead of generating a placeholder.
         - Ensure arguments match the expected schema for the tools.
-        - Do not include explanations, reasoning, or conversational text. ONLY output the raw, valid JSON object. Do not invent your own keys.
+        - Do not include explanations, reasoning, or conversational text. Output the valid JSON object ONLY.
+
+        IMPORTANT:
+        - If attachments are present in the intent, use them as literal file paths in your tool arguments.
+        - Start numbering your steps from {next_step_id}. Do not start from 1 unless {next_step_id} is 1.
         """
 
-    def plan(self, intent: Dict[str, Any], available_tools: List[Dict[str, Any]]) -> Dict[str, Any]:
+    def plan(self, intent: Dict[str, Any], available_tools: List[Dict[str, Any]], previous_context: str = "", next_step_id: int = 1) -> Dict[str, Any]:
         """
         Generates an execution plan based on the intent and available tools.
         """
         tools_str = json.dumps(available_tools, indent=2)
         intent_str = json.dumps(intent, indent=2)
         
-        prompt = f"""
-        Structured Intent:
-        {intent_str}
-        
-        Available Tools:
-        {tools_str}
-        
-        Generate the JSON execution plan.
-        """
+        prompt = f"Previous Context:\n{previous_context}\n\nStructured Intent:\n{intent_str}\n\nAvailable Tools:\n{tools_str}\n\nStart your step numbering from ID: {next_step_id}"
         
         # We use commercial_reasoning capability for accurate planning
         return self.router.generate_json(
