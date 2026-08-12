@@ -31,6 +31,7 @@ class PromptEngineerAgent:
         - Normalize terms (e.g., "devis" -> "quote", "facture" -> "invoice").
         - Extract exact client names if present.
         - Extract exact email addresses if present (e.g., director@atlasecommerce.ma).
+        - If the Previous Context shows a quote/document was already generated, and the user just asks to send it via email, DO NOT include quote creation actions (like db.create_quote, document.generate) UNLESS they explicitly request a different document format (e.g. they ask for PDF). If they just want to send the existing one, ONLY include email actions (email.prepare, email.send) and put the previously generated file_path in "attachments".
         """
 
     def analyze(self, user_input: str, previous_context: str = "") -> Dict[str, Any]:

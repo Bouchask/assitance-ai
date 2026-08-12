@@ -10,11 +10,11 @@ from backend.models.document import Document
 
 def generate_document(
     document_type: str,
-    client_name: str,
     items: list,
     total_ht: float,
     tax: float,
     total_ttc: float,
+    client_name: Optional[str] = None,
     original_subtotal: float = 0.0,
     discount_amount: float = 0.0,
     discount_percent_val: float = 0.0,
@@ -32,8 +32,28 @@ def generate_document(
     # We will use the LaTeX service to render and compile the document
     # and return the generated filepath or ID
     
+    # Resolve client_name and client_id dynamically
+    resolved_client_id = int(client_id) if client_id is not None else None
+    resolved_client_name = client_name
+    
+    db = SessionLocal()
+    try:
+        if resolved_client_id is not None and not resolved_client_name:
+            client = db.query(Client).filter(Client.id == resolved_client_id).first()
+            if client:
+                resolved_client_name = client.name
+        elif resolved_client_name and resolved_client_id is None:
+            client = db.query(Client).filter(Client.name == resolved_client_name).first()
+            if client:
+                resolved_client_id = client.id
+                
+        if not resolved_client_name:
+            resolved_client_name = "Client" # Fallback if totally unknown
+    finally:
+        db.close()
+
     context = {
-        "client_name": client_name,
+        "client_name": resolved_client_name,
         "items": items,
         "subtotal": total_ht,
         "original_subtotal": original_subtotal,
@@ -64,10 +84,6 @@ def generate_document(
     # execution process has finished.
     db = SessionLocal()
     try:
-        resolved_client_id = int(client_id) if client_id is not None else None
-        if resolved_client_id is None:
-            client = db.query(Client).filter(Client.name == client_name).first()
-            resolved_client_id = client.id if client else None
         if resolved_client_id is None:
             raise ValueError("A generated document must be linked to an existing client.")
         document = Document(
@@ -97,11 +113,11 @@ def generate_document(
 
 def generate_excel_document(
     document_type: str,
-    client_name: str,
     items: list,
     total_ht: float,
     tax: float,
     total_ttc: float,
+    client_name: Optional[str] = None,
     original_subtotal: float = 0.0,
     discount_amount: float = 0.0,
     discount_percent_val: float = 0.0,
@@ -113,8 +129,28 @@ def generate_excel_document(
     if document_type != "quote":
         raise ValueError("Only quote documents are available in this MVP.")
     
+    # Resolve client_name and client_id dynamically
+    resolved_client_id = int(client_id) if client_id is not None else None
+    resolved_client_name = client_name
+    
+    db = SessionLocal()
+    try:
+        if resolved_client_id is not None and not resolved_client_name:
+            client = db.query(Client).filter(Client.id == resolved_client_id).first()
+            if client:
+                resolved_client_name = client.name
+        elif resolved_client_name and resolved_client_id is None:
+            client = db.query(Client).filter(Client.name == resolved_client_name).first()
+            if client:
+                resolved_client_id = client.id
+                
+        if not resolved_client_name:
+            resolved_client_name = "Client" # Fallback if totally unknown
+    finally:
+        db.close()
+
     context = {
-        "client_name": client_name,
+        "client_name": resolved_client_name,
         "items": items,
         "subtotal": total_ht,
         "original_subtotal": original_subtotal,
@@ -136,10 +172,6 @@ def generate_excel_document(
     # Record the generated artifact
     db = SessionLocal()
     try:
-        resolved_client_id = int(client_id) if client_id is not None else None
-        if resolved_client_id is None:
-            client = db.query(Client).filter(Client.name == client_name).first()
-            resolved_client_id = client.id if client else None
         if resolved_client_id is None:
             raise ValueError("A generated document must be linked to an existing client.")
         document = Document(

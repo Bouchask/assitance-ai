@@ -34,7 +34,7 @@ def register_document_tools():
                     "client_id": {"type": "integer"},
                     "reference_id": {"type": "integer"}
                 },
-                "required": ["document_type", "client_name", "items", "total_ht", "tax", "total_ttc"]
+                "required": ["document_type", "items", "total_ht", "tax", "total_ttc"]
             },
             output_schema={
                 "type": "object",
@@ -70,7 +70,7 @@ def register_document_tools():
                     "client_id": {"type": "integer", "description": "Database ID of the client"},
                     "reference_id": {"type": "integer", "description": "Database ID of the quote record"}
                 },
-                "required": ["document_type", "client_name", "items", "total_ht", "tax", "total_ttc"]
+                "required": ["document_type", "items", "total_ht", "tax", "total_ttc"]
             },
             output_schema={
                 "type": "object",

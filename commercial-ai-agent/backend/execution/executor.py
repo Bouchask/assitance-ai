@@ -36,8 +36,9 @@ class ExecutionEngine:
         steps = sorted(plan.get("steps", []), key=lambda x: x.get("id", 0))
 
         if not steps:
-            state_machine.transition_to(ExecutionState.FAILED, "Plan contains no steps")
-            return {"status": "failed", "reason": "empty_plan", "results": results}
+            # An empty plan is valid for conversational/informational intents
+            state_machine.transition_to(ExecutionState.COMPLETED)
+            return {"status": "completed", "results": results}
 
         try:
             step_ids = [int(step["id"]) for step in steps]
@@ -82,87 +83,48 @@ class ExecutionEngine:
                 state_machine.transition_to(ExecutionState.FAILED, f"Tool {tool_name} not found")
                 return {"status": "failed", "step": step_id, "reason": "tool_not_found"}
                 
-            # Check approval
-            if ApprovalManager.requires_approval(tool_schema) and step_id not in approved_step_ids:
-                state_machine.transition_to(ExecutionState.WAITING_APPROVAL)
-                return {
-                    "status": "waiting_approval",
-                    "step": step_id,
-                    "tool": tool_name,
-                    "arguments": arguments,
-                    "results_so_far": results
-                }
-                
             # --- Interpolation Engine ---
             _NOT_FOUND = object()
             
             def _extract_from_data(data, key_path):
-                """Extract a value from step result data using a dot-separated key path.
-                Handles lists (takes first element), dicts (navigates keys), and fallbacks."""
                 keys = key_path.split(".")
                 current = data
-                
                 for i, key in enumerate(keys):
-                    # Unwrap lists — take first element
                     if isinstance(current, list):
-                        if len(current) == 0:
-                            return _NOT_FOUND
+                        if len(current) == 0: return _NOT_FOUND
                         current = current[0]
-                    
                     if isinstance(current, dict):
-                        if key in current:
-                            current = current[key]
-                        elif key.endswith("_id") and "id" in current:
-                            current = current["id"]
-                        elif key == "result" and i < len(keys) - 1:
-                            # Smart fallback: if LLM hallucinated 'result' as an intermediate key 
-                            # (e.g. step1.result.id) but 'result' isn't in the dict, just ignore 'result'
-                            pass
+                        if key in current: current = current[key]
+                        elif key.endswith("_id") and "id" in current: current = current["id"]
+                        elif key == "result" and i < len(keys) - 1: pass
                         elif key == "result" and i == len(keys) - 1:
-                            # Smart fallback: if LLM asked for 'result' at the end of the path (e.g. step4.result)
-                            # but it's not there, try to guess the most likely output it wanted.
-                            if "file_path" in current:
-                                current = current["file_path"]
-                            elif "id" in current:
-                                current = current["id"]
-                            else:
-                                return _NOT_FOUND
-                        else:
-                            return _NOT_FOUND
+                            if "file_path" in current: current = current["file_path"]
+                            elif "id" in current: current = current["id"]
+                            else: return _NOT_FOUND
+                        else: return _NOT_FOUND
                     else:
-                        # Can't navigate further into a scalar
                         return current if i == len(keys) - 1 else _NOT_FOUND
-                
                 return current
             
-            # Regex: capture optional 'step' prefix, then number, then full dotted key path (e.g. "result.email")
             PLACEHOLDER_RE = r"\{\{(?:step)?(\d+)\.([a-zA-Z0-9_.]+)\}\}"
             
             def resolve_value(val):
                 if isinstance(val, str):
-                    # Exact match: entire value is one placeholder
                     exact_match = re.fullmatch(PLACEHOLDER_RE, val.strip())
                     if exact_match:
                         s_num = int(exact_match.group(1))
                         k = exact_match.group(2)
                         if s_num in results and results[s_num].get("success"):
                             resolved = _extract_from_data(results[s_num]["data"], k)
-                            if resolved is not _NOT_FOUND:
-                                logger.info(f"Interpolated {{{{step{s_num}.{k}}}}} -> {resolved}")
-                                return resolved
-                        logger.warning(f"Could not resolve {{{{step{s_num}.{k}}}}} — results keys: {list(results.keys())}")
+                            if resolved is not _NOT_FOUND: return resolved
                         return val
-                            
-                    # Embedded match: placeholder inside a larger string
                     def replace_match(match):
                         s_num = int(match.group(1))
                         k = match.group(2)
                         if s_num in results and results[s_num].get("success"):
                             resolved = _extract_from_data(results[s_num]["data"], k)
-                            if resolved is not _NOT_FOUND:
-                                return "" if resolved is None else str(resolved)
+                            if resolved is not _NOT_FOUND: return "" if resolved is None else str(resolved)
                         return match.group(0)
-                        
                     return re.sub(PLACEHOLDER_RE, replace_match, val)
                 elif isinstance(val, dict):
                     return {k: resolve_value(v) for k, v in val.items()}
@@ -171,6 +133,19 @@ class ExecutionEngine:
                 return val
                 
             interpolated_arguments = resolve_value(arguments)
+            
+            # Check approval AFTER interpolation so the UI shows actual values
+            if ApprovalManager.requires_approval(tool_schema) and step_id not in approved_step_ids:
+                state_machine.transition_to(ExecutionState.WAITING_APPROVAL)
+                return {
+                    "status": "waiting_approval",
+                    "step": step_id,
+                    "tool": tool_name,
+                    "arguments": interpolated_arguments,
+                    "results_so_far": results
+                }
+                
+
             logger.info(f"Step {step_id} ({tool_name}): raw args = {arguments}")
             logger.info(f"Step {step_id} ({tool_name}): interpolated args = {interpolated_arguments}")
             

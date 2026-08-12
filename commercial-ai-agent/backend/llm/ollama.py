@@ -10,7 +10,7 @@ class OllamaProvider(LLMProvider):
         self.api_url = f"{self.base_url}/api/generate"
         self.chat_url = f"{self.base_url}/api/chat"
 
-    def generate(self, prompt: str, model: str, system_prompt: Optional[str] = None) -> str:
+    def generate(self, prompt: str, model: str, system_prompt: Optional[str] = None, timeout: Optional[float] = None, **kwargs) -> str:
         payload = {
             "model": model,
             "prompt": prompt,
@@ -19,11 +19,11 @@ class OllamaProvider(LLMProvider):
         if system_prompt:
             payload["system"] = system_prompt
             
-        response = requests.post(self.api_url, json=payload, timeout=None)
+        response = requests.post(self.api_url, json=payload, timeout=(timeout if timeout is not None else None))
         response.raise_for_status()
         return response.json().get("response", "")
 
-    def generate_json(self, prompt: str, model: str, system_prompt: Optional[str] = None) -> Dict[str, Any]:
+    def generate_json(self, prompt: str, model: str, system_prompt: Optional[str] = None, timeout: Optional[float] = None, **kwargs) -> Dict[str, Any]:
         payload = {
             "model": model,
             "prompt": prompt,
@@ -32,7 +32,7 @@ class OllamaProvider(LLMProvider):
         if system_prompt:
             payload["system"] = system_prompt
             
-        response = requests.post(self.api_url, json=payload, timeout=None)
+        response = requests.post(self.api_url, json=payload, timeout=(timeout if timeout is not None else None))
         response.raise_for_status()
         raw_response = response.json().get("response", "{}")
         
@@ -67,7 +67,7 @@ class OllamaProvider(LLMProvider):
             logging.error(f"Failed to parse JSON from Ollama. Raw string: {raw_response}")
             return {}
 
-    def generate_with_tools(self, prompt: str, model: str, tools: List[Dict[str, Any]], system_prompt: Optional[str] = None) -> Dict[str, Any]:
+    def generate_with_tools(self, prompt: str, model: str, tools: List[Dict[str, Any]], system_prompt: Optional[str] = None, timeout: Optional[float] = None, **kwargs) -> Dict[str, Any]:
         messages = []
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
@@ -80,12 +80,12 @@ class OllamaProvider(LLMProvider):
             "stream": False
         }
         
-        response = requests.post(self.chat_url, json=payload, timeout=None)
+        response = requests.post(self.chat_url, json=payload, timeout=(timeout if timeout is not None else None))
         response.raise_for_status()
         
         return response.json().get("message", {})
 
-    def analyze_image(self, prompt: str, image_path: str, model: str, system_prompt: Optional[str] = None) -> str:
+    def analyze_image(self, prompt: str, image_path: str, model: str, system_prompt: Optional[str] = None, timeout: Optional[float] = None, **kwargs) -> str:
         import base64
         
         with open(image_path, "rb") as img_file:
@@ -100,6 +100,6 @@ class OllamaProvider(LLMProvider):
         if system_prompt:
             payload["system"] = system_prompt
             
-        response = requests.post(self.api_url, json=payload, timeout=None)
+        response = requests.post(self.api_url, json=payload, timeout=(timeout if timeout is not None else None))
         response.raise_for_status()
         return response.json().get("response", "")

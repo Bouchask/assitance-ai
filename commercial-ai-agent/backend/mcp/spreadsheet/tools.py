@@ -8,6 +8,10 @@ def search_spreadsheet(filepath: str, query_column: str, query_value: str) -> Li
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
         data_root = os.path.realpath(os.path.join(project_root, "data"))
         resolved_path = os.path.realpath(filepath)
+        
+        if os.path.islink(filepath):
+            raise ValueError("Symlinks are not allowed for security reasons.")
+            
         if os.path.commonpath([data_root, resolved_path]) != data_root:
             raise ValueError("Spreadsheet must be located in the managed data directory.")
         if not os.path.isfile(resolved_path):

@@ -46,9 +46,11 @@ class PlannerAgent:
         - For document.generate, ALWAYS omit the "template_name" argument so it uses the system default, or pass exactly "b2b" if required.
         - If 'client_email' is present in the Intent, use that exact email string for the 'email.prepare' "to" argument instead of generating a placeholder.
         - Ensure arguments match the expected schema for the tools.
+        - All 'client_id', 'quote_id', and 'reference_id' arguments MUST be integers (e.g. 5, not "QTE-123").
         - Do not include explanations, reasoning, or conversational text. Output the valid JSON object ONLY.
 
         IMPORTANT:
+        - If previous context shows a document was already generated (e.g., you see a file_path), DO NOT regenerate the document UNLESS the user explicitly requested a DIFFERENT format (e.g., they asked for PDF but the existing file is XLSX). If a different format is requested, you MUST use document.generate. If no different format is requested, just use email.prepare and email.send directly with the existing file_path.
         - If attachments are present in the intent, use them as literal file paths in your tool arguments.
         - Start numbering your steps from {next_step_id}. Do not start from 1 unless {next_step_id} is 1.
         """

@@ -80,14 +80,21 @@ class ModelRouter:
         """
         last_error = None
         
+        import inspect
         for attempt in range(self.max_retries):
             try:
-                # Add timeout to kwargs
-                kwargs['timeout'] = self.timeout_sec
-                
                 # Get method from provider
                 method = getattr(self.provider, method_name)
-                
+
+                # Only add timeout if the provider method accepts it
+                try:
+                    sig = inspect.signature(method)
+                    if 'timeout' in sig.parameters:
+                        kwargs['timeout'] = self.timeout_sec
+                except (ValueError, TypeError):
+                    # If signature can't be inspected, fall back to not injecting timeout
+                    pass
+
                 logger.debug(
                     f"Calling {method_name} (attempt {attempt + 1}/{self.max_retries})",
                     extra={"extra_fields": {"method": method_name, "attempt": attempt + 1}}

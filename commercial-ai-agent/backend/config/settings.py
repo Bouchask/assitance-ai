@@ -26,6 +26,7 @@ class Settings(BaseSettings):
     
     JWT_SECRET: str = "your_jwt_secret_here"
     CORS_ORIGINS: str = "http://localhost:5173,http://127.0.0.1:5173"
+    ALLOW_DEBUGGER: bool = False
 
     class Config:
         env_file = __import__("os").path.join(__import__("os").path.dirname(__import__("os").path.dirname(__import__("os").path.abspath(__file__))), ".env")
@@ -37,6 +38,9 @@ import os
 env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
 load_dotenv(dotenv_path=env_path, override=True)
 
+import logging
+import secrets
+
 settings = Settings(
     OPENROUTER_API_KEY=os.getenv("OPENROUTER_API_KEY", None),
     GENERAL_MODEL=os.getenv("GENERAL_MODEL", "gemma4:12b-mlx"),
@@ -46,6 +50,20 @@ settings = Settings(
     VISION_MODEL=os.getenv("VISION_MODEL", "qwen3:14b"),
     FAST_MODEL=os.getenv("FAST_MODEL", "qwen3:14b")
 )
+
+# Ensure JWT secret is of sufficient length. In production, fail fast.
+if getattr(settings, "JWT_SECRET", None) is None:
+    raise RuntimeError("JWT_SECRET must be set in environment or .env")
+
+if len(settings.JWT_SECRET) < 32:
+    if settings.APP_ENV == "production":
+        raise RuntimeError("Insecure JWT_SECRET in production: must be at least 32 bytes. Set a secure JWT_SECRET env var.")
+    # For non-production, generate an ephemeral secure secret to avoid short-key warnings
+    ephemeral = secrets.token_hex(32)
+    logging.getLogger(__name__).warning(
+        "Configured JWT_SECRET is shorter than 32 bytes. Generating an ephemeral secure JWT secret for this process."
+    )
+    settings.JWT_SECRET = ephemeral
 
 
 def cors_origins() -> list[str]:

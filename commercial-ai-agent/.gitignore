@@ -13,9 +13,22 @@ __pycache__/
 *$py.class
 *.so
 .Python
+venv/
+env/
+ENV/
+.venv
 backend/venv/
 backend/.env
+backend/.env.local
 backend/commercial.db
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+*.log
+logs/
 
 # =========================
 # Node / Frontend

@@ -1,4 +1,6 @@
 from typing import List, Dict, Any, Optional
+import re
+from functools import lru_cache
 from sqlalchemy.orm import Session
 from backend.database.connection import SessionLocal
 from backend.models.client import Client
@@ -29,6 +31,11 @@ def search_client(name: str) -> List[Dict[str, Any]]:
 
 def create_client(name: str, email: Optional[str] = None, phone: Optional[str] = None, address: Optional[str] = None) -> Dict[str, Any]:
     """Create a new client in the database."""
+    if email and not re.match(r"[^@]+@[^@]+\.[^@]+", email.strip()):
+        raise ValueError(f"Invalid email format: {email}")
+    if phone and not re.match(r"^\+?[\d\s\-\(\)]+$", phone.strip()):
+        raise ValueError(f"Invalid phone format: {phone}")
+        
     db = get_db_session()
     try:
         new_client = Client(name=name, email=email, phone=phone, address=address)
@@ -50,6 +57,11 @@ def create_client(name: str, email: Optional[str] = None, phone: Optional[str] =
 
 def find_or_create_client(name: str, email: Optional[str] = None, phone: Optional[str] = None, address: Optional[str] = None) -> Dict[str, Any]:
     """Find an existing client by name, or create a new one if not found. Always returns a single client dict with an 'id'."""
+    if email and not re.match(r"[^@]+@[^@]+\.[^@]+", email.strip()):
+        raise ValueError(f"Invalid email format: {email}")
+    if phone and not re.match(r"^\+?[\d\s\-\(\)]+$", phone.strip()):
+        raise ValueError(f"Invalid phone format: {phone}")
+        
     db = get_db_session()
     try:
         existing = db.query(Client).filter(Client.name.ilike(f"%{name}%")).first()
@@ -79,6 +91,28 @@ def find_or_create_client(name: str, email: Optional[str] = None, phone: Optiona
     finally:
         db.close()
 
+@lru_cache(maxsize=1)
+def _fetch_all_services_from_db():
+    db = get_db_session()
+    try:
+        if not db.query(Service.id).first():
+            seed_catalogue(db)
+        return [
+            {
+                "id": service.id,
+                "code": service.code,
+                "name": service.name,
+                "description": service.description or service.name,
+                "unit": service.unit,
+                "unit_price": float(service.unit_price),
+                "currency": service.currency,
+                "tax_rate": float(service.tax_rate),
+            }
+            for service in db.query(Service).order_by(Service.code).all()
+        ]
+    finally:
+        db.close()
+
 def get_services(codes: Optional[List[str]] = None) -> List[Dict[str, Any]]:
     """Read the managed catalogue from PostgreSQL, seeding it once if empty."""
     aliases = {
@@ -92,35 +126,18 @@ def get_services(codes: Optional[List[str]] = None) -> List[Dict[str, Any]]:
         "maintenance_6": "MAINT-6",
         "maintenance_6_months": "MAINT-6",
     }
-    requested_codes = None
-    if codes:
-        requested_codes = {
-            aliases.get(str(code).strip().lower(), str(code).strip().upper())
-            for code in codes
-        }
-
-    db = get_db_session()
-    try:
-        if not db.query(Service.id).first():
-            seed_catalogue(db)
-        query = db.query(Service)
-        if requested_codes:
-            query = query.filter(Service.code.in_(requested_codes))
-        return [
-            {
-                "id": service.id,
-                "code": service.code,
-                "name": service.name,
-                "description": service.description or service.name,
-                "unit": service.unit,
-                "unit_price": float(service.unit_price),
-                "currency": service.currency,
-                "tax_rate": float(service.tax_rate),
-            }
-            for service in query.order_by(Service.code).all()
-        ]
-    finally:
-        db.close()
+    
+    all_services = _fetch_all_services_from_db()
+    
+    if not codes:
+        return all_services
+        
+    requested_codes = {
+        aliases.get(str(code).strip().lower(), str(code).strip().upper())
+        for code in codes
+    }
+    
+    return [s for s in all_services if s["code"] in requested_codes]
 
 import uuid
 def create_quote(client_id: int, items: List[Dict[str, Any]], total_ht: float, total_tax: float, total_ttc: float, status: str = "draft") -> Dict[str, Any]:

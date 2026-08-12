@@ -1,5 +1,8 @@
 from typing import Dict, Any, List, Optional
 import os
+import re
+import time
+import ssl
 
 
 def _validate_attachment_path(filepath: str) -> str:
@@ -26,6 +29,9 @@ def prepare_email(
     
     if not to or not to.strip() or to.strip() == "None":
         raise ValueError("Cannot prepare email: The recipient's email address is missing. Please provide a valid email address.")
+        
+    if not re.match(r"[^@]+@[^@]+\.[^@]+", to.strip()):
+        raise ValueError(f"Invalid email format: {to}")
     
     valid_attachments = []
     if attachments:
@@ -79,20 +85,42 @@ def send_email(
             part.add_header('Content-Disposition', f"attachment; filename= {filename}")
             msg.attach(part)
 
+    if not re.match(r"[^@]+@[^@]+\.[^@]+", to.strip()):
+        raise ValueError(f"Invalid email format: {to}")
+
     try:
-        server = smtplib.SMTP(smtp_host, smtp_port)
-        server.starttls()
-        server.login(smtp_user, smtp_pass)
-        text = msg.as_string()
-        server.sendmail(smtp_user, to, text)
-        server.quit()
+        context = ssl.create_default_context()
         
-        return {
-            "status": "sent",
-            "to": to,
-            "subject": subject,
-            "attachments_count": len(attachments) if attachments else 0,
-            "message": "Email successfully sent."
-        }
+        max_retries = 3
+        base_delay = 1
+        last_error = None
+        
+        for attempt in range(max_retries):
+            try:
+                server = smtplib.SMTP(smtp_host, smtp_port, timeout=10)
+                server.starttls(context=context)
+                server.login(smtp_user, smtp_pass)
+                text = msg.as_string()
+                server.sendmail(smtp_user, to, text)
+                server.quit()
+                
+                return {
+                    "status": "sent",
+                    "to": to,
+                    "subject": subject,
+                    "attachments_count": len(attachments) if attachments else 0,
+                    "message": "Email successfully sent."
+                }
+            except smtplib.SMTPException as e:
+                last_error = e
+                if attempt < max_retries - 1:
+                    time.sleep(base_delay * (2 ** attempt)) # Exponential backoff
+            except Exception as e:
+                # For non-SMTP errors (like network unreachable), also retry
+                last_error = e
+                if attempt < max_retries - 1:
+                    time.sleep(base_delay * (2 ** attempt))
+                    
+        raise RuntimeError(f"Failed to send email after {max_retries} attempts. Last error: {str(last_error)}")
     except Exception as e:
-        raise RuntimeError(f"Failed to send email: {str(e)}")
+        raise RuntimeError(f"Email operation failed: {str(e)}")

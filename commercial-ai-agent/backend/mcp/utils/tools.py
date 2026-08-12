@@ -43,6 +43,9 @@ def prepare_quote_items(codes: List[str], quantities: Dict[str, int] = None, dis
     """Look up product codes, apply a discount and tax, and format the output for document generation."""
     from backend.mcp.database.tools import get_services
     
+    if discount_percent < 0.0 or discount_percent > 1.0:
+        raise ValueError("discount_percent must be between 0.0 (0%) and 1.0 (100%)")
+        
     quantities = quantities or {}
     code_counts = Counter(codes)
     services = get_services(list(code_counts.keys()))
