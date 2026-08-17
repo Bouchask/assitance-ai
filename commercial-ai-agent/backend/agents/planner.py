@@ -46,7 +46,7 @@ class PlannerAgent:
           - E.g. use "{{stepN.file_path}}" for document.generate.
           - E.g. use "{{stepN.result}}" ONLY for utils.calculate.
           - Make sure to map "{{stepN.original_subtotal}}", "{{stepN.discount_amount}}", and "{{stepN.discount_percent_val}}" to document.generate if available.
-          - The placeholder must be the ENTIRE value, not embedded in other text, when used for numeric/array fields.
+          - The placeholder must be the ENTIRE value, not embedded in other text. NEVER wrap placeholders in an array (e.g. use "{{stepN.items}}", DO NOT use ["{{stepN.items}}"]).
         - For document.generate, ALWAYS omit the "template_name" argument so it uses the system default, or pass exactly "b2b" if required.
         - For 'email.prepare', you MUST provide 'to', 'subject', and 'body' arguments! If 'client_email' is in the Intent, use it for 'to'. You MUST invent an appropriate professional 'subject' and 'body' yourself.
         - Ensure arguments match the expected schema for the tools.
