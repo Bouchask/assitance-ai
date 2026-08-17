@@ -30,7 +30,23 @@ def create_app():
     register_email_tools()
     register_utils_tools()
 
+    # Dashboard API blueprint (clients, services, quotes, invoices)
+    try:
+        from backend.api.dashboard import bp as dashboard_bp
+        app.register_blueprint(dashboard_bp)
+    except Exception:
+        # If dashboard blueprint is not present yet, continue without failing startup
+        pass
+
     app.orchestrator = LangGraphOrchestrator()
+
+    from flask import send_from_directory
+    import os
+
+    @app.route("/api/documents/<path:filename>", methods=["GET"])
+    def serve_document(filename):
+        data_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "data"))
+        return send_from_directory(data_dir, filename)
 
     @app.route("/health", methods=["GET"])
     def health_check():

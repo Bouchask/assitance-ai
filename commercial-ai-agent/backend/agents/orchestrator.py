@@ -3,7 +3,7 @@ from typing import Dict, Any, List, Optional
 from backend.agents.prompt_engineer import PromptEngineerAgent
 from backend.agents.planner import PlannerAgent
 from backend.agents.response_agent import ResponseAgent
-from backend.execution.executor import ExecutionEngine
+from backend.execution.executor_improved import ExecutionEngine
 from backend.execution.state_machine import StateMachine, ExecutionState
 from backend.mcp.registry import registry
 from backend.llm.router import ModelRouter

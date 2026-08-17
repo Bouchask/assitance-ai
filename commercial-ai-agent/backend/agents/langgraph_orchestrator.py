@@ -1,16 +1,18 @@
 import uuid
 from typing import Dict, Any, List, TypedDict
 from langgraph.graph import StateGraph, START, END
-from langgraph.checkpoint.memory import MemorySaver
+from langgraph.checkpoint.sqlite import SqliteSaver
+import sqlite3
 
 from backend.agents.prompt_engineer import PromptEngineerAgent
 from backend.agents.planner import PlannerAgent
 from backend.agents.response_agent import ResponseAgent
-from backend.execution.executor import ExecutionEngine
+from backend.execution.executor_improved import ExecutionEngine
 from backend.execution.state_machine import StateMachine, ExecutionState
 from backend.mcp.registry import registry
 from backend.llm.router import ModelRouter
 from backend.mcp.client import MCPClient
+from backend.config.settings import settings
 
 class AgentState(TypedDict):
     execution_id: str
@@ -34,8 +36,15 @@ class LangGraphOrchestrator:
         self.mcp_client = MCPClient()
         self.executor = ExecutionEngine(self.mcp_client)
         
-        self.checkpointer = MemorySaver()
+        db_path = settings.DATABASE_URL.replace("sqlite:///", "")
+        self.conn = sqlite3.connect(db_path, check_same_thread=False)
+        self.checkpointer = SqliteSaver(self.conn)
+        self.checkpointer.setup()
         self.graph = self._build_graph()
+
+    def __del__(self):
+        if hasattr(self, 'conn'):
+            self.conn.close()
 
     def _build_graph(self):
         workflow = StateGraph(AgentState)

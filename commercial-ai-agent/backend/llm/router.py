@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class ModelRouter:
     """Routes requests to appropriate LLM providers and models based on capability."""
     
-    def __init__(self, primary_provider: LLMProvider = None, timeout_sec: float = 60.0):
+    def __init__(self, primary_provider: LLMProvider = None, timeout_sec: float = 300.0):
         """
         Initialize router with provider selection and configuration.
         

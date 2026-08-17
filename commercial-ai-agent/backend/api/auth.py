@@ -41,3 +41,20 @@ def jwt_required(f):
         return f(*args, **kwargs)
         
     return decorated
+
+
+def roles_required(*roles):
+    """Decorator to require the current user have one of the specified roles."""
+    def wrapper(f):
+        @wraps(f)
+        def decorated(*args, **kwargs):
+            user = getattr(request, 'current_user', None)
+            if not user:
+                return jsonify({"error": "Authentication required"}), 401
+            user_role = (user.role or '').upper()
+            allowed = [r.upper() for r in roles]
+            if user_role not in allowed:
+                return jsonify({"error": "Permission denied"}), 403
+            return f(*args, **kwargs)
+        return decorated
+    return wrapper

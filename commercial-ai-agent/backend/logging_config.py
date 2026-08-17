@@ -8,7 +8,30 @@ import uuid
 import sys
 from typing import Any, Dict, Optional
 from datetime import datetime
-from pythonjsonlogger import jsonlogger
+try:
+    from pythonjsonlogger import jsonlogger
+    _HAS_PJLOG = True
+except Exception:
+    # Fallback minimal json logger for environments where python-json-logger is not installed
+    _HAS_PJLOG = False
+    class jsonlogger:
+        class JsonFormatter(logging.Formatter):
+            def __init__(self, *args, **kwargs):
+                super().__init__(*args, **kwargs)
+            def format(self, record):
+                # Basic JSON-ish formatting
+                import json
+                rv = {
+                    "timestamp": getattr(record, 'created', None),
+                    "level": record.levelname,
+                    "logger": record.name,
+                    "message": record.getMessage(),
+                }
+                if hasattr(record, 'correlation_id'):
+                    rv['correlation_id'] = record.correlation_id
+                if record.exc_info:
+                    rv['exception'] = self.formatException(record.exc_info)
+                return json.dumps(rv)
 
 
 class CorrelationIDFilter(logging.Filter):

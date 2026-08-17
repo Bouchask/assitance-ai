@@ -39,7 +39,7 @@ def calculate(expression: str) -> Dict[str, Any]:
 
 from collections import Counter
 
-def prepare_quote_items(codes: List[str], quantities: Dict[str, int] = None, discount_percent: float = 0.0, tax_rate: float = 0.20) -> Dict[str, Any]:
+def prepare_quote_items(codes: List[str], quantities: Dict[str, int] = None, custom_descriptions: Dict[str, str] = None, discount_percent: float = 0.0, tax_rate: float = 0.20) -> Dict[str, Any]:
     """Look up product codes, apply a discount and tax, and format the output for document generation."""
     from backend.mcp.database.tools import get_services
     
@@ -47,6 +47,7 @@ def prepare_quote_items(codes: List[str], quantities: Dict[str, int] = None, dis
         raise ValueError("discount_percent must be between 0.0 (0%) and 1.0 (100%)")
         
     quantities = quantities or {}
+    custom_descriptions = custom_descriptions or {}
     code_counts = Counter(codes)
     services = get_services(list(code_counts.keys()))
     if not services:
@@ -62,7 +63,7 @@ def prepare_quote_items(codes: List[str], quantities: Dict[str, int] = None, dis
         items.append({
             "service_id": s["id"],
             "code": s["code"],
-            "description": s.get("name", "Unknown"),
+            "description": custom_descriptions.get(s["code"], s.get("name", "Unknown")),
             "quantity": qty,
             "price": price,
             "line_total": line_total,
@@ -81,6 +82,7 @@ def prepare_quote_items(codes: List[str], quantities: Dict[str, int] = None, dis
         "original_subtotal": subtotal,
         "discount_amount": discount_amount,
         "discount_percent_val": discount_percent * 100,
+        "tax_rate_val": tax_rate * 100,
         "total_ht": subtotal_discounted,
         "tax": tax,
         "total_ttc": total

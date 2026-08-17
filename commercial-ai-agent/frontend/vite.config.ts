@@ -10,6 +10,7 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [tailwindcss(), react()],
     server: {
+      allowedHosts: true,
       proxy: {
         '/api': {
           target: backendUrl,

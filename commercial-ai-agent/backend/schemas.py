@@ -224,3 +224,72 @@ class SearchParams(BaseModel):
         le=100,
         description="Maximum results"
     )
+
+
+# Dashboard-related payloads
+class ClientCreate(BaseModel):
+    name: str = Field(..., description="Client name")
+    email: Optional[EmailStr] = Field(None, description="Client email")
+    phone: Optional[str] = Field(None, description="Client phone")
+    address: Optional[str] = Field(None, description="Client address")
+
+
+class ServiceCreate(BaseModel):
+    code: str = Field(..., description="Unique service code")
+    name: str = Field(..., description="Service name")
+    description: Optional[str] = Field(None)
+    unit_price: float = Field(..., ge=0)
+    currency: Optional[str] = Field('MAD')
+    tax_rate: Optional[float] = Field(20.0)
+
+
+class QuoteItemCreate(BaseModel):
+    service_id: int
+    quantity: Optional[float] = Field(1.0, ge=0)
+    unit_price: float = Field(..., ge=0)
+    tax_rate: Optional[float] = Field(20.0)
+
+
+class QuoteCreate(BaseModel):
+    quote_number: str
+    client_id: int
+    items: List[QuoteItemCreate]
+    status: Optional[str] = Field('DRAFT')
+    valid_until: Optional[str] = None
+
+
+class QuoteResponse(BaseModel):
+    id: int
+    quote_number: str
+    client_id: int
+    status: str
+    subtotal: float
+    tax_total: float
+    total_amount: float
+    created_at: Optional[str]
+
+
+class InvoiceItemCreate(BaseModel):
+    service_id: int
+    quantity: Optional[float] = Field(1.0, ge=0)
+    unit_price: float = Field(..., ge=0)
+    tax_rate: Optional[float] = Field(20.0)
+
+
+class InvoiceCreate(BaseModel):
+    invoice_number: str
+    client_id: int
+    items: List[InvoiceItemCreate]
+    status: Optional[str] = Field('DRAFT')
+    due_date: Optional[str] = None
+
+
+class InvoiceResponse(BaseModel):
+    id: int
+    invoice_number: str
+    client_id: int
+    status: str
+    subtotal: float
+    tax_total: float
+    total_amount: float
+    created_at: Optional[str]

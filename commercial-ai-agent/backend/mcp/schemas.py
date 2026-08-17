@@ -26,10 +26,40 @@ def validate_tool_arguments(arguments: Dict[str, Any], schema: Dict[str, Any]) -
         if unknown:
             raise ToolInputValidationError(f"Unsupported argument(s): {', '.join(sorted(unknown))}")
 
-    def validate_value(value: Any, value_schema: Dict[str, Any], path: str) -> None:
+    def validate_value(value: Any, value_schema: Dict[str, Any], path: str, parent: dict, key: str) -> None:
         if value is None:
             return
         expected = value_schema.get("type")
+        
+        # Implicit coercion for array when string is provided
+        if expected == "array" and isinstance(value, str):
+            if not value.strip() or value.strip().lower() == "none" or value.strip() == "[]":
+                value = []
+                parent[key] = value
+            else:
+                # Try parsing as JSON list, otherwise wrap in list
+                import json
+                try:
+                    parsed = json.loads(value)
+                    if isinstance(parsed, list):
+                        value = parsed
+                    else:
+                        value = [value]
+                except json.JSONDecodeError:
+                    value = [value]
+                parent[key] = value
+
+        # Implicit coercion for integer/number when string is provided
+        if expected in ("integer", "number") and isinstance(value, str):
+            try:
+                if expected == "integer":
+                    value = int(value)
+                else:
+                    value = float(value)
+                parent[key] = value
+            except (ValueError, TypeError):
+                pass # let the validator fail later
+                
         valid = {
             "string": isinstance(value, str),
             "number": isinstance(value, (int, float)) and not isinstance(value, bool),
@@ -45,15 +75,18 @@ def validate_tool_arguments(arguments: Dict[str, Any], schema: Dict[str, Any]) -
         if expected == "array":
             item_schema = value_schema.get("items", {})
             for index, item in enumerate(value):
-                validate_value(item, item_schema, f"{path}[{index}]")
+                # Note: nested coercion not strictly required, passing a dummy dict/key for now
+                dummy = {str(index): item}
+                validate_value(item, item_schema, f"{path}[{index}]", dummy, str(index))
+                value[index] = dummy[str(index)]
         elif expected == "object":
-            for key, nested_schema in value_schema.get("properties", {}).items():
-                if key in value:
-                    validate_value(value[key], nested_schema, f"{path}.{key}")
+            for k, nested_schema in value_schema.get("properties", {}).items():
+                if k in value:
+                    validate_value(value[k], nested_schema, f"{path}.{k}", value, k)
 
     for name, value in arguments.items():
         if name in properties:
-            validate_value(value, properties[name], name)
+            validate_value(value, properties[name], name, arguments, name)
 
 class ToolParameter(BaseModel):
     type: str

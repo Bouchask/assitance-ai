@@ -64,6 +64,32 @@ class MCPClient:
             self._audit(result, started_at)
             return result
 
+    def invoke(self, tool_name: str, arguments: Dict[str, Any], execution_id: str = None) -> Any:
+        """Convenience wrapper used by the execution engine.
+
+        Executes the registered tool and returns its data payload on success.
+        On failure, raises a backend.exceptions.ToolError with structured context.
+        """
+        # Generate a short-lived execution id if caller didn't provide one
+        execution_id = execution_id or f"exec-{int(time.time() * 1000)}"
+        result = self.execute_tool(tool_name, arguments, execution_id=execution_id)
+
+        if not result.success:
+            # Raise a structured ToolError so callers can handle failures consistently
+            try:
+                from backend.exceptions import ToolError as BackendToolError
+            except Exception:
+                raise RuntimeError(f"Tool {tool_name} failed: {result.error}")
+
+            err = result.error or {"message": "Unknown tool error"}
+            raise BackendToolError(
+                message=f"Tool '{tool_name}' execution failed: {err.get('message', err)}",
+                tool_name=tool_name,
+                tool_error=str(err)
+            )
+
+        return result.data
+
     @staticmethod
     def _audit(result: ToolResult, started_at: float) -> None:
         """Persist minimal, non-sensitive tool telemetry without blocking a tool call."""

@@ -18,6 +18,7 @@ def generate_document(
     original_subtotal: float = 0.0,
     discount_amount: float = 0.0,
     discount_percent_val: float = 0.0,
+    tax_rate_val: float = 20.0,
     template_name: str = "b2b",
     additional_context: Optional[Dict[str, Any]] = None,
     client_id: Optional[int] = None,
@@ -59,6 +60,7 @@ def generate_document(
         "original_subtotal": original_subtotal,
         "discount_amount": discount_amount,
         "discount_percent_val": discount_percent_val,
+        "tax_rate_val": int(tax_rate_val) if float(tax_rate_val).is_integer() else tax_rate_val,
         "tax": tax,
         "total": total_ttc,
         "document_number": f"{document_type[:3].upper()}-{str(uuid.uuid4())[:8]}"
@@ -121,6 +123,7 @@ def generate_excel_document(
     original_subtotal: float = 0.0,
     discount_amount: float = 0.0,
     discount_percent_val: float = 0.0,
+    tax_rate_val: float = 20.0,
     additional_context: Optional[Dict[str, Any]] = None,
     client_id: Optional[int] = None,
     reference_id: Optional[int] = None,
@@ -156,6 +159,7 @@ def generate_excel_document(
         "original_subtotal": original_subtotal,
         "discount_amount": discount_amount,
         "discount_percent_val": discount_percent_val,
+        "tax_rate_val": int(tax_rate_val) if float(tax_rate_val).is_integer() else tax_rate_val,
         "tax": tax,
         "total": total_ttc,
         "document_number": f"{document_type[:3].upper()}-{str(uuid.uuid4())[:8]}"

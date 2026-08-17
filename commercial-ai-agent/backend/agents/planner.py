@@ -27,13 +27,17 @@ class PlannerAgent:
         CRITICAL Rules:
         - Step "id" MUST be an integer (1, 2, 3, ...), NOT a string.
         - "depends_on" is a list of integer step IDs that must complete before this step.
-        - For clients: ALWAYS use "db.find_or_create_client" (NOT "db.search_client"). It guarantees a client with an "id" is returned.
+        - For clients: ALWAYS use "db.find_or_create_client" (NOT "db.search_client"). You MUST provide the 'name' argument using the client name from the Intent (do not invent arguments like 'client_id' for this tool).
         - For emails: ONLY use email tools if the user explicitly requested to send an email or if an email address is provided. If used, ALWAYS use "email.prepare" first, then "email.send" (NEVER "email.generate").
         - To prepare quote lines and handle discounts, use "utils.prepare_quote_items" instead of multiple calculate steps.
         - For every quote creation, the required order is: db.find_or_create_client, utils.prepare_quote_items, db.create_quote, AND THEN generate the document.
         - IMPORTANT: If the Intent specifies "document_format": "excel", use "document.generate_excel". If it specifies "pdf" or is omitted, use "document.generate". Pass {{stepN.items}}, {{stepN.total_ht}}, {{stepN.tax}} (for the total_tax argument), and {{stepN.total_ttc}} into db.create_quote. Pass the client id and quote id to the document tool as client_id and reference_id.
         - The 'requirements' field from the Intent contains objects like {"service": "SEO", "quantity": 2}. You MUST map these to valid catalogue codes (e.g. "SEO-OPT") for the 'codes' argument of 'utils.prepare_quote_items'.
+        - The 'codes' argument MUST be a JSON array of strings (e.g. ["SEO-OPT", "MAINT-6"]). Do NOT use a dictionary.
         - You MUST also pass a 'quantities' dictionary (e.g. {"SEO-OPT": 2}) to 'utils.prepare_quote_items' to properly reflect the requested quantities!
+        - You MUST pass 'discount_percent' and 'tax_rate' to 'utils.prepare_quote_items' if they are provided in the Intent.
+        - PAY CLOSE ATTENTION to durations requested by the user. If the user asks for a duration (e.g. "12 months of maintenance") and the catalogue only has a different duration base (e.g. "MAINT-6" which is 6 months), you MUST do the math and adjust the quantity! (e.g., 12 months = 2 * MAINT-6, so pass {"MAINT-6": 2}). DO NOT skip a service just because the exact duration doesn't exist; calculate the multiplier!
+        - IMPORTANT: If you adjusted a quantity to match a duration (like the 12 months maintenance example above), you MUST ALSO pass a 'custom_descriptions' dictionary to 'utils.prepare_quote_items' to override the default catalogue name on the invoice (e.g., {"MAINT-6": "12 Months Maintenance"}) so the client sees exactly what they asked for!
         - Use only actual catalogue codes returned by the tool descriptions: WEB-ECOMM, MAINT-6, SEO-OPT. Never invent a price or a service.
         - To reference output from a previous step, use placeholders like "{{step1.id}}" or "{{step4.file_path}}".
           - The placeholder suffix MUST match the actual key from the tool's output_schema.
@@ -44,13 +48,15 @@ class PlannerAgent:
           - Make sure to map "{{stepN.original_subtotal}}", "{{stepN.discount_amount}}", and "{{stepN.discount_percent_val}}" to document.generate if available.
           - The placeholder must be the ENTIRE value, not embedded in other text, when used for numeric/array fields.
         - For document.generate, ALWAYS omit the "template_name" argument so it uses the system default, or pass exactly "b2b" if required.
-        - If 'client_email' is present in the Intent, use that exact email string for the 'email.prepare' "to" argument instead of generating a placeholder.
+        - For 'email.prepare', you MUST provide 'to', 'subject', and 'body' arguments! If 'client_email' is in the Intent, use it for 'to'. You MUST invent an appropriate professional 'subject' and 'body' yourself.
         - Ensure arguments match the expected schema for the tools.
         - All 'client_id', 'quote_id', and 'reference_id' arguments MUST be integers (e.g. 5, not "QTE-123").
         - Do not include explanations, reasoning, or conversational text. Output the valid JSON object ONLY.
 
         IMPORTANT:
-        - If previous context shows a document was already generated (e.g., you see a file_path), DO NOT regenerate the document UNLESS the user explicitly requested a DIFFERENT format (e.g., they asked for PDF but the existing file is XLSX). If a different format is requested, you MUST use document.generate. If no different format is requested, just use email.prepare and email.send directly with the existing file_path.
+        - The Intent contains an 'actions' array (e.g. ["utils.prepare_quote_items", ...]). You MUST generate a step for EVERY action listed in that array! Do not skip any action listed in the intent.
+        - If previous context shows a document was already generated, you should ONLY skip regenerating it IF the quote data (discount, tax, items, client) is EXACTLY the same AND they just want to send the exact same file in the same format.
+        - If the Intent contains an AMENDMENT (a different discount, different tax rate, new client, or modified requirements compared to the previous context), you MUST REGENERATE EVERYTHING from scratch (utils.prepare_quote_items, db.create_quote, document.generate, etc.). The old document is obsolete!
         - If attachments are present in the intent, use them as literal file paths in your tool arguments.
         - Start numbering your steps from {next_step_id}. Do not start from 1 unless {next_step_id} is 1.
         """

@@ -43,6 +43,11 @@ def register_utils_tools():
                         "additionalProperties": {"type": "integer"},
                         "description": "Optional mapping of product codes to quantities (e.g. {'SEO-OPT': 2}). If omitted, quantities default to 1 (or the number of times the code appears in 'codes')."
                     },
+                    "custom_descriptions": {
+                        "type": "object",
+                        "additionalProperties": {"type": "string"},
+                        "description": "Optional mapping of product codes to custom descriptions to override the catalog name on the invoice (e.g. {'MAINT-6': '12 Months Maintenance'})."
+                    },
                     "discount_percent": {
                         "type": "number",
                         "description": "Discount as a decimal (e.g. 0.15 for 15%). Default is 0.0."
@@ -61,6 +66,7 @@ def register_utils_tools():
                     "original_subtotal": {"type": "number"},
                     "discount_amount": {"type": "number"},
                     "discount_percent_val": {"type": "number"},
+                    "tax_rate_val": {"type": "number"},
                     "total_ht": {"type": "number"},
                     "tax": {"type": "number"},
                     "total_ttc": {"type": "number"}

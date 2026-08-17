@@ -65,7 +65,7 @@ class OllamaProvider(LLMProvider):
                 logging.error(f"Failed to repair JSON: {e}")
                 
             logging.error(f"Failed to parse JSON from Ollama. Raw string: {raw_response}")
-            return {}
+            raise Exception("Failed to parse valid JSON from Ollama. Response was empty or malformed.")
 
     def generate_with_tools(self, prompt: str, model: str, tools: List[Dict[str, Any]], system_prompt: Optional[str] = None, timeout: Optional[float] = None, **kwargs) -> Dict[str, Any]:
         messages = []

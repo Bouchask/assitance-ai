@@ -231,15 +231,6 @@ class ExecutionEngine:
                 log_execution(execution_id, step_id, error_msg)
                 return {"success": False, "error": error_msg}
         
-        # Check if approval needed
-        if step_id not in approved_step_ids:
-            log_execution(execution_id, step_id, "Waiting for approval")
-            return {
-                "success": False,
-                "status": "waiting_approval",
-                "arguments": arguments
-            }
-        
         # Get tool schema
         tool_schema = registry.get_tool(tool_name)
         if not tool_schema:
@@ -248,9 +239,9 @@ class ExecutionEngine:
             raise ToolError(
                 message=error_msg,
                 tool_name=tool_name,
-                error_code=ErrorCode.TOOL_NOT_FOUND
+                tool_error=error_msg
             )
-        
+
         # Interpolate arguments using prior results
         try:
             resolved_arguments = self._resolve_arguments(arguments, prior_results)
@@ -263,12 +254,50 @@ class ExecutionEngine:
                 execution_id=execution_id,
                 original_error=e
             )
+
+        # Check if approval needed AFTER interpolation so the UI shows actual values
+        try:
+            if ApprovalManager.requires_approval(tool_schema) and step_id not in approved_step_ids:
+                # Persist a waiting tool call so UI/ops can approve it
+                try:
+                    from backend.database.connection import SessionLocal
+                    from backend.models.execution import Execution, ToolCall
+                    db = SessionLocal()
+                    try:
+                        # Ensure execution record exists
+                        ex = db.query(Execution).filter(Execution.id == execution_id).first()
+                        if not ex:
+                            ex = Execution(id=execution_id, session_id=None, user_id=None, state='RECEIVED')
+                            db.add(ex)
+                            db.flush()
+                        tc = ToolCall(execution_id=execution_id, tool_name=tool_name, arguments=resolved_arguments, status='WAITING_APPROVAL', duration=None)
+                        db.add(tc)
+                        db.commit()
+                        db.refresh(tc)
+                        tool_call_id = tc.id
+                    finally:
+                        db.close()
+                except Exception:
+                    logger.exception('Failed to persist waiting ToolCall')
+                    tool_call_id = None
+
+                log_execution(execution_id, step_id, "Waiting for approval")
+                return {
+                    "success": False,
+                    "status": "waiting_approval",
+                    "arguments": resolved_arguments,
+                    "tool_call_id": tool_call_id
+                }
+        except Exception:
+            # If approval manager errored, continue to attempt execution
+            logger.exception('ApprovalManager check failed; continuing execution')
         
         # Execute tool with timeout
         log_tool_invocation(tool_name, resolved_arguments)
         start_time = time.time()
         
         try:
+            print(f"DEBUG EXECUTOR: tool={tool_name}, raw_arguments={arguments}, resolved={resolved_arguments}")
             result = self._invoke_tool_with_timeout(
                 tool_name=tool_name,
                 arguments=resolved_arguments,
@@ -393,19 +422,52 @@ class ExecutionEngine:
                 raise ValueError(f"Invalid template: {{{{{step_field}}}}}")
             
             step_prefix, field = parts
-            step_num = int(step_prefix.replace("step", ""))
+            step_num = int(step_prefix.replace("step_", "").replace("step", ""))
             
             if step_num not in prior_results:
                 raise ValueError(f"Step {step_num} not found in results")
             
-            data = prior_results[step_num].get("data", {})
-            if field not in data:
-                raise ValueError(f"Field '{field}' not found in step {step_num} results")
+            data = prior_results[step_num].get('data', {})
             
-            return str(data[field])
+            # Field Fallback Logic
+            if field not in data:
+                if field.endswith('_id') and 'id' in data:
+                    field = 'id'
+                else:
+                    raise ValueError(f"Field '{field}' not found in step {step_num} results")
+            
+            # For inline replacements, coerce to string
+            return "" if data[field] is None else str(data[field])
         
-        # Replace {{stepN.field}} patterns
-        pattern = r"\{\{(step\d+\.\w+)\}\}"
+        # If the entire text is a single placeholder, return the raw typed value
+        pattern_full = r"(?:\{\{|\$\{)?((?:step_?)?\d+\.\w+)(?:\}\}|\})?"
+        full = re.fullmatch(pattern_full, text.strip())
+        if full:
+            step_field = full.group(1)
+            parts = step_field.split('.')
+            step_ref = parts[0]
+            field = parts[1]
+            
+            # Extract step number
+            try:
+                step_num_str = re.search(r'\d+', step_ref).group()
+                step_num = int(step_num_str)
+                data = prior_results.get(step_num, {}).get('data', {})
+            except (ValueError, AttributeError):
+                data = {}
+            
+            # Fallback for ID fields mapping
+            if field not in data:
+                if field.endswith('_id') and 'id' in data:
+                    field = 'id'
+                    
+            if field not in data:
+                return text
+                
+            return data[field]
+
+        # Replace {{stepN.field}} patterns for inline substitutions
+        pattern = r"(?:\{\{|\$\{)((?:step_?)?\d+\.\w+)(?:\}\}|\})"
         return re.sub(pattern, replace_template, text)
     
     def _validate_tool_result(self, result: Any, tool_schema: Dict[str, Any]) -> None:
@@ -424,9 +486,16 @@ class ExecutionEngine:
             raise ValueError(f"Invalid tool result type: {type(result)}")
         
         # Check required fields if schema specifies
-        output_schema = tool_schema.get("output_schema", {})
-        required_fields = output_schema.get("required", [])
-        
+        if hasattr(tool_schema, 'output_schema'):
+            # ToolSchema (Pydantic model)
+            output_schema = tool_schema.output_schema or {}
+        elif isinstance(tool_schema, dict):
+            output_schema = tool_schema.get("output_schema", {})
+        else:
+            output_schema = {}
+
+        required_fields = output_schema.get("required", []) if isinstance(output_schema, dict) else []
+
         if required_fields and isinstance(result, dict):
             for field in required_fields:
                 if field not in result:

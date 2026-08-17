@@ -8,6 +8,7 @@ from backend.models.invoice import Invoice, InvoiceItem
 from backend.models.document import Document, Template
 from backend.models.execution import Execution, ToolCall
 from backend.models.audit_log import AuditLog
+from backend.models.assignment import Assignment
 
 __all__ = [
     "Base",
@@ -26,5 +27,6 @@ __all__ = [
     "Template",
     "Execution",
     "ToolCall",
-    "AuditLog"
+    "AuditLog",
+    "Assignment"
 ]
