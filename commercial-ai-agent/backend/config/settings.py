@@ -25,6 +25,10 @@ class Settings(BaseSettings):
     SMTP_PASSWORD: Optional[str] = None
     
     JWT_SECRET: str = "your_jwt_secret_here"
+    FRONTEND_URL: str = "http://localhost:5175"
+    
+
+    
     CORS_ORIGINS: str = "http://localhost:5173,http://127.0.0.1:5173"
     ALLOW_DEBUGGER: bool = False
 

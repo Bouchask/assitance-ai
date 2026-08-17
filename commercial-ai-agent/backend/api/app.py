@@ -52,6 +52,81 @@ def create_app():
     def health_check():
         return jsonify({"status": "ok", "service": "commercial-ai-agent"})
 
+    @app.route("/api/auth/google", methods=["POST"])
+    def google_auth():
+        data = request.json
+        code = data.get("code")
+        if not code:
+            return jsonify({"error": "Missing authorization code"}), 400
+            
+        import requests
+        token_url = "https://oauth2.googleapis.com/token"
+        payload = {
+            "code": code,
+            "client_id": settings.GOOGLE_CLIENT_ID,
+            "client_secret": settings.GOOGLE_CLIENT_SECRET,
+            "redirect_uri": "postmessage",
+            "grant_type": "authorization_code"
+        }
+        
+        resp = requests.post(token_url, data=payload)
+        if not resp.ok:
+            return jsonify({"error": "Failed to exchange token", "details": resp.json()}), 400
+            
+        token_data = resp.json()
+        access_token = token_data.get("access_token")
+        refresh_token = token_data.get("refresh_token")
+        id_token_jwt = token_data.get("id_token")
+        
+        from google.oauth2 import id_token as google_id_token
+        from google.auth.transport import requests as google_requests
+        try:
+            id_info = google_id_token.verify_oauth2_token(id_token_jwt, google_requests.Request(), settings.GOOGLE_CLIENT_ID)
+        except ValueError:
+            return jsonify({"error": "Invalid ID token"}), 400
+            
+        email = id_info.get("email")
+        google_id = id_info.get("sub")
+        
+        db = SessionLocal()
+        try:
+            user = db.query(User).filter((User.email == email) | (User.google_id == google_id)).first()
+            if not user:
+                user = User(
+                    email=email,
+                    google_id=google_id,
+                    role="SALES",
+                    is_active=True
+                )
+                db.add(user)
+            else:
+                user.google_id = google_id
+                
+            user.google_access_token = access_token
+            if refresh_token:
+                user.google_refresh_token = refresh_token
+                
+            db.commit()
+            db.refresh(user)
+            
+            jwt_token = jwt.encode({
+                "sub": str(user.id),
+                "email": user.email,
+                "role": user.role,
+                "exp": datetime.datetime.utcnow() + datetime.timedelta(days=1)
+            }, settings.JWT_SECRET, algorithm="HS256")
+            
+            return jsonify({
+                "token": jwt_token,
+                "user": {
+                    "id": user.id,
+                    "email": user.email,
+                    "role": user.role
+                }
+            })
+        finally:
+            db.close()
+
     @app.route("/api/login", methods=["POST"])
     def login():
         data = request.json
