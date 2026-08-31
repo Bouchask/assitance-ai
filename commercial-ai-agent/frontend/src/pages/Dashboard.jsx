@@ -13,6 +13,7 @@ import {
   Search,
   Settings,
   Sparkles,
+  Table,
   UserRound,
   X,
 } from "lucide-react";
@@ -38,7 +39,7 @@ const RECENT_CHATS = [
   "Catalogue des services",
 ];
 
-function Sidebar({ open, onClose, onNewChat, user, onLogout, setView }) {
+function Sidebar({ open, onClose, onNewChat, user, onLogout, setView, spreadsheetId }) {
   return (
     <aside
       className={`fixed inset-y-0 left-0 z-40 flex w-[272px] flex-col border-r border-white/[0.07] bg-[#171717] p-2 transition-transform duration-200 md:static md:translate-x-0 ${
@@ -80,6 +81,29 @@ function Sidebar({ open, onClose, onNewChat, user, onLogout, setView }) {
           <button onClick={() => setView('assignments')} className={`sidebar-chat`}>
             Assignations
           </button>
+        </div>
+
+        <div className="sidebar-label mt-4">Accès Rapide</div>
+        <div className="mt-1 space-y-0.5">
+          <a
+            href={spreadsheetId ? `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit` : "#"}
+            target={spreadsheetId ? "_blank" : "_self"}
+            rel="noopener noreferrer"
+            onClick={(e) => {
+              if (!spreadsheetId) {
+                e.preventDefault();
+                toast.error("Aucun tableur Google Sheets créé. Demandez à l'agent de créer un export pour le générer !");
+              }
+            }}
+            className={`flex items-center gap-2 rounded-xl px-2 py-2 text-left text-sm transition-colors ${
+              spreadsheetId 
+                ? "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20" 
+                : "text-zinc-500 cursor-not-allowed"
+            }`}
+          >
+            <Table className="size-4 shrink-0" />
+            <span className="truncate">Base de Données (Sheets)</span>
+          </a>
         </div>
 
         <div className="sidebar-label mt-4">Récentes</div>
@@ -495,6 +519,28 @@ export default function Dashboard({ user, onLogout }) {
   const [messages, setMessages] = useState([WELCOME_MESSAGE]);
   const [threadId, setThreadId] = useState(() => crypto.randomUUID());
   const [activeView, setActiveView] = useState('chat');
+  const [spreadsheetId, setSpreadsheetId] = useState(null);
+
+  useEffect(() => {
+    const fetchSpreadsheetId = async () => {
+      try {
+        const token = localStorage.getItem('auth_token');
+        if (!token) return;
+        const res = await fetch(`${API_BASE_URL}/api/user/spreadsheet`, {
+          headers: { 'Authorization': 'Bearer ' + token }
+        });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.spreadsheet_id) {
+            setSpreadsheetId(data.spreadsheet_id);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch spreadsheet ID:", err);
+      }
+    };
+    fetchSpreadsheetId();
+  }, []);
   
   const scrollRef = useRef(null);
   const textareaRef = useRef(null);
@@ -621,7 +667,7 @@ export default function Dashboard({ user, onLogout }) {
     <main className="flex h-[100dvh] overflow-hidden text-zinc-100">
       <Toaster theme="dark" richColors position="bottom-right" />
       {isSidebarOpen && <button className="fixed inset-0 z-30 bg-black/55 md:hidden backdrop-blur-sm transition-all" onClick={() => setSidebarOpen(false)} aria-label="Fermer le menu" />}
-      <Sidebar open={isSidebarOpen} onClose={() => setSidebarOpen(false)} onNewChat={startNewChat} user={user} onLogout={onLogout} setView={setActiveView} />
+      <Sidebar open={isSidebarOpen} onClose={() => setSidebarOpen(false)} onNewChat={startNewChat} user={user} onLogout={onLogout} setView={setActiveView} spreadsheetId={spreadsheetId} />
 
       <section className="relative flex min-w-0 flex-1 flex-col">
         <header className="flex h-14 shrink-0 items-center justify-between px-3 md:px-5">

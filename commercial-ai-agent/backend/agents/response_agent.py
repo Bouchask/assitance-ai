@@ -14,6 +14,10 @@ class ResponseAgent:
         
         If there was an error, explain it politely and simply, and tell the user what succeeded before the error occurred.
         
+        CRITICAL FORMATTING RULE: Whenever you return a URL/link (like a Google Calendar event link or Google Sheets link), NEVER output the raw URL text. You MUST format it as a clean Markdown link with a short, descriptive action text. For example:
+        Correct: [Ouvrir l'événement dans Google Agenda](https://www.google.com/calendar/event?eid=...)
+        Incorrect: https://www.google.com/calendar/event?eid=...
+        
         Use the language of the initial user request, or French if uncertain, as this is a Moroccan/French context (MAD currency).
         """
 

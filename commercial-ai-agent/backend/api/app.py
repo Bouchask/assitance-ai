@@ -23,12 +23,16 @@ def create_app():
     from backend.mcp.document.server import register_document_tools
     from backend.mcp.email.server import register_email_tools
     from backend.mcp.utils.server import register_utils_tools
+    from backend.mcp.google_calendar.server import register_google_calendar_tools
+    from backend.mcp.google_sheets.server import register_google_sheets_tools
     
     register_database_tools()
     register_spreadsheet_tools()
     register_document_tools()
     register_email_tools()
     register_utils_tools()
+    register_google_calendar_tools()
+    register_google_sheets_tools()
 
     # Dashboard API blueprint (clients, services, quotes, invoices)
     try:
@@ -51,6 +55,22 @@ def create_app():
     @app.route("/health", methods=["GET"])
     def health_check():
         return jsonify({"status": "ok", "service": "commercial-ai-agent"})
+
+    @app.route("/api/user/spreadsheet", methods=["GET"])
+    @jwt_required
+    def get_user_spreadsheet():
+        user = getattr(request, 'current_user', None)
+        if not user:
+            return jsonify({"error": "Unauthorized"}), 401
+            
+        db = SessionLocal()
+        try:
+            db_user = db.query(User).filter(User.id == user.id).first()
+            if db_user and db_user.default_spreadsheet_id:
+                return jsonify({"spreadsheet_id": db_user.default_spreadsheet_id})
+            return jsonify({"spreadsheet_id": None})
+        finally:
+            db.close()
 
     @app.route("/api/auth/google", methods=["POST"])
     def google_auth():
@@ -77,6 +97,14 @@ def create_app():
         access_token = token_data.get("access_token")
         refresh_token = token_data.get("refresh_token")
         id_token_jwt = token_data.get("id_token")
+        granted_scopes = token_data.get("scope", "")
+        
+        # Verify that the user checked the boxes for Calendar and Sheets
+        if "calendar" not in granted_scopes.lower() or "spreadsheets" not in granted_scopes.lower():
+            return jsonify({
+                "error": "Autorisations manquantes. Vous DEVEZ cocher les cases pour Google Agenda et Google Sheets lors de la connexion."
+            }), 403
+        
         
         from google.oauth2 import id_token as google_id_token
         from google.auth.transport import requests as google_requests

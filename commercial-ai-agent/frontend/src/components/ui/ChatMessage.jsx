@@ -1,7 +1,7 @@
 import React from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Check, ShieldCheck, Sparkles, X } from "lucide-react";
+import { Check, ShieldCheck, Sparkles, X, Calendar, Table } from "lucide-react";
 
 export function ChatMessage({ message, onApprove }) {
   const isUser = message.role === "user";
@@ -95,6 +95,66 @@ export function ChatMessage({ message, onApprove }) {
     );
   };
 
+  const renderCalendarPreview = (args) => {
+    return (
+      <div className="mt-4 bg-[#1a1a1a] rounded-lg border border-white/10 overflow-hidden text-[13px] shadow-inner">
+        <div className="p-4 border-b border-white/5 bg-blue-500/10 flex items-center gap-3">
+          <Calendar className="size-5 text-blue-400" />
+          <span className="text-blue-100 font-semibold text-sm">Google Calendar Meeting</span>
+        </div>
+        <div className="p-4 flex flex-col gap-3">
+          <div className="flex gap-4">
+            <span className="text-zinc-500 font-medium w-24 shrink-0">Titre :</span>
+            <span className="text-zinc-200 font-medium">{args.title}</span>
+          </div>
+          <div className="flex gap-4">
+            <span className="text-zinc-500 font-medium w-24 shrink-0">Date / Heure :</span>
+            <span className="text-emerald-400">{new Date(args.start_time).toLocaleString('fr-FR')}</span>
+          </div>
+          {args.attendees && args.attendees.length > 0 && (
+            <div className="flex gap-4">
+              <span className="text-zinc-500 font-medium w-24 shrink-0">Invités :</span>
+              <span className="text-zinc-300">{args.attendees.join(', ')}</span>
+            </div>
+          )}
+          {args.description && (
+            <div className="flex gap-4">
+              <span className="text-zinc-500 font-medium w-24 shrink-0">Description :</span>
+              <span className="text-zinc-400 text-xs">{args.description}</span>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const renderSheetsPreview = (args) => {
+    return (
+      <div className="mt-4 bg-[#1a1a1a] rounded-lg border border-white/10 overflow-hidden text-[13px] shadow-inner">
+        <div className="p-4 border-b border-white/5 bg-green-500/10 flex items-center gap-3">
+          <Table className="size-5 text-green-400" />
+          <span className="text-green-100 font-semibold text-sm">Google Sheets Export</span>
+        </div>
+        <div className="p-4 flex flex-col gap-3">
+          <div className="flex gap-4">
+            <span className="text-zinc-500 font-medium w-24 shrink-0">ID Fichier :</span>
+            <span className="text-zinc-200 font-mono text-xs">{args.spreadsheet_id || "Automatique (Nouveau ou Existant)"}</span>
+          </div>
+          <div className="flex gap-4">
+            <span className="text-zinc-500 font-medium w-24 shrink-0">Données :</span>
+            <div className="flex gap-2 flex-wrap">
+              {args.values?.map((val, i) => (
+                <span key={i} className="bg-white/5 border border-white/10 px-2 py-1 rounded text-zinc-300">
+                  {String(val)}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <article className="flex gap-3 py-4 sm:gap-4 sm:py-5">
       <div className="mt-0.5 grid size-7 shrink-0 place-items-center rounded-full bg-emerald-600 text-white shadow-sm">
@@ -102,7 +162,25 @@ export function ChatMessage({ message, onApprove }) {
       </div>
       <div className="min-w-0 flex-1 pt-0.5">
         <div className="agent-markdown text-[15px] leading-7 text-zinc-100">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+          <ReactMarkdown 
+            remarkPlugins={[remarkGfm]}
+            components={{
+              a: ({node, ...props}) => {
+                const isCalendar = props.href?.includes('calendar.google.com');
+                const isSheets = props.href?.includes('docs.google.com/spreadsheets');
+                
+                return (
+                  <a href={props.href} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/30 px-3 py-1.5 text-[13px] font-medium text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500/50 transition-all my-2 shadow-sm">
+                    {isCalendar && <Calendar className="size-3.5" />}
+                    {isSheets && <Table className="size-3.5" />}
+                    {isCalendar ? "Ouvrir dans Google Agenda" : isSheets ? "Ouvrir dans Google Sheets" : "Ouvrir le lien"}
+                  </a>
+                );
+              }
+            }}
+          >
+            {message.content}
+          </ReactMarkdown>
         </div>
 
         {message.approval && (
@@ -180,6 +258,10 @@ export function ChatMessage({ message, onApprove }) {
               </div>
             ) : message.approval.tool === 'email.send' && message.approval.arguments ? (
               renderEmailPreview(message.approval.arguments)
+            ) : message.approval.tool === 'google.calendar.create_meeting' && message.approval.arguments ? (
+              renderCalendarPreview(message.approval.arguments)
+            ) : message.approval.tool === 'google.sheets.append_row' && message.approval.arguments ? (
+              renderSheetsPreview(message.approval.arguments)
             ) : (
               <div className="mt-4 rounded-lg bg-black/40 border border-white/5 overflow-hidden">
                 <div className="px-3 py-2 border-b border-white/5 bg-white/5 text-[10px] font-medium text-zinc-400 uppercase tracking-wider flex justify-between items-center">

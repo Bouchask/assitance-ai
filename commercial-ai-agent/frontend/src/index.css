@@ -64,6 +64,29 @@
 .agent-markdown li { padding-left: .15rem; }
 .agent-markdown code { border-radius: .35rem; background: rgba(255,255,255,.09); padding: .12rem .32rem; font-size: .85em; }
 .agent-markdown blockquote { margin: .75rem 0; border-left: 2px solid #emerald-500/50; padding-left: .85rem; color: #a1a1aa; background: rgba(16,185,129,0.05); border-radius: 0 0.5rem 0.5rem 0; }
+.agent-markdown a {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.35rem 0.75rem;
+  margin: 0.5rem 0;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  border-radius: 0.5rem;
+  color: #34d399;
+  text-decoration: none;
+  font-weight: 500;
+  font-size: 0.85em;
+  transition: all 0.2s ease;
+  word-break: break-all;
+}
+.agent-markdown a:hover {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: rgba(16, 185, 129, 0.5);
+  color: #6ee7b7;
+  transform: translateY(-1px);
+  shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+}
 
 .thinking-dots { display: inline-flex; gap: 4px; }
 .thinking-dots i { width: 5px; height: 5px; border-radius: 50%; background: #a1a1aa; animation: typing 1.2s infinite ease-in-out; }

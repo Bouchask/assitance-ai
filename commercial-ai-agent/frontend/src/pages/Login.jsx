@@ -14,6 +14,7 @@ export default function Login({ onLoginSuccess }) {
   const googleLogin = useGoogleLogin({
     flow: 'auth-code',
     scope: 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/calendar',
+    prompt: 'consent',
     onSuccess: async (codeResponse) => {
       setIsGoogleLoading(true);
       setError('');

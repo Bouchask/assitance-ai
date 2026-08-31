@@ -115,7 +115,7 @@ class LangGraphOrchestrator:
                 if res.get("success"):
                     previous_context += f"- Step {step_id}: {res.get('data', {})}\n"
                     
-        plan = self.planner.plan(state["intent"], available_tools, previous_context, next_step_id)
+        plan = self.planner.plan(state["intent"], available_tools, previous_context, next_step_id, state["user_input"])
         state["plan"] = plan
         return state
 
