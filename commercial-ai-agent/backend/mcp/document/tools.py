@@ -25,8 +25,8 @@ def generate_document(
     reference_id: Optional[int] = None,
 ) -> Dict[str, Any]:
     """Generate a document (PDF) based on structured content."""
-    if document_type != "quote":
-        raise ValueError("Only quote documents are available in this MVP.")
+    if document_type not in ["quote", "invoice"]:
+        raise ValueError(f"Document type {document_type} is not supported. Only 'quote' and 'invoice' are supported.")
     if template_name != "b2b":
         raise ValueError("Unsupported document template.")
     

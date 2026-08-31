@@ -13,15 +13,15 @@ class PromptEngineerAgent:
             "intent": "string (e.g., create_quote, create_invoice, find_client)",
             "document_type": "string (e.g., quote, invoice, proposal) or null",
             "document_format": "string ('excel' or 'pdf', default to 'pdf')",
-            "client": "string (name of the client, MUST default to 'Client Standard' if the user did not specify any client)",
+            "client": "string (name of the client. If the user did not specify a client, default to the Name/Email provided in the 'Connected User Info' context)",
             "client_email": "string (extracted email address) or null",
             "requirements": [
                 {
                     "service": "string (e.g., ecommerce, seo, maintenance)",
-                    "quantity": "integer (number of items requested, MUST be at least 1, default to 1, NEVER 0)"
+                    "quantity": "integer (number of items requested, MUST be at least 1, default to 1, NEVER 0)",
+                    "duration_months": "integer (if the user asks for 'X months of maintenance', extract X here, e.g. 12) or null"
                 }
             ],
-            "maintenance_duration": "integer (months) or null",
             "discount_percent": "float (e.g., 0.10 for 10% discount) or 0.0",
             "tax_rate": "float (e.g., 0.20 for 20% TVA) or 0.20",
             "meeting_date": "string (extracted target date for a meeting, e.g. '2026-10-10') or null",
@@ -32,7 +32,7 @@ class PromptEngineerAgent:
         
         Rules:
         - Do not include explanations, ONLY valid JSON.
-        - IMPORTANT MVP LIMITATION: Only "quote" (devis) is supported right now. Even if the user asks for a "facture" (invoice), you MUST set "document_type" to "quote" and use quote actions (e.g. utils.prepare_quote_items, db.create_quote).
+        - DOCUMENT TYPE: If the user explicitly asks for a "facture" (invoice), you MUST set "document_type" to "invoice". If they ask for a quote or devis, set it to "quote". (Both use db.create_quote under the hood).
         - Extract exact client names if present.
         - Extract exact email addresses if present (e.g., director@atlasecommerce.ma).
         - NEVER skip a requested service! If the user mentions "maintenance", "SEO", "website", etc., you MUST add every single one of them to the 'requirements' array.
@@ -44,11 +44,11 @@ class PromptEngineerAgent:
         - If the Previous Context shows a quote/document was already generated, and the user just asks to send it via email, DO NOT include quote creation actions (like db.create_quote, document.generate) UNLESS they explicitly request a different document format (e.g. they ask for PDF). If they just want to send the existing one, ONLY include email actions (email.prepare, email.send) and put the previously generated file_path in "attachments".
         """
 
-    def analyze(self, user_input: str, previous_context: str = "") -> Dict[str, Any]:
+    def analyze(self, user_input: str, previous_context: str = "", user_info: str = "") -> Dict[str, Any]:
         """
         Analyzes raw user input and returns a structured JSON intent.
         """
-        prompt = f"Previous Context (use this to find file paths for attachments):\n{previous_context}\n\nUser request: {user_input}"
+        prompt = f"Connected User Info (Use this as default client if no client is specified): {user_info}\n\nPrevious Context (use this to find file paths for attachments):\n{previous_context}\n\nUser request: {user_input}"
         # We use commercial_reasoning capability for accurate intent extraction
         return self.router.generate_json(
             capability="commercial_reasoning",

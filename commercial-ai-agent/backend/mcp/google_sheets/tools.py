@@ -111,3 +111,34 @@ def append_row(
         }
     except Exception as e:
         raise RuntimeError(f"Failed to append row to Google Sheet: {str(e)}")
+
+def get_all_sheets_data(spreadsheet_id: str) -> Dict[str, List[List[Any]]]:
+    """Fetch all data from a specific Google Sheet."""
+    creds = get_user_google_credentials()
+    if not creds:
+        raise ValueError("User Google credentials not found.")
+        
+    try:
+        service = build('sheets', 'v4', credentials=creds)
+        
+        # Get all sheet names
+        sheet_metadata = service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
+        sheets = sheet_metadata.get('sheets', [])
+        
+        all_data = {}
+        for sheet in sheets:
+            title = sheet.get("properties", {}).get("title")
+            if not title:
+                continue
+            
+            # Fetch data for each sheet
+            result = service.spreadsheets().values().get(
+                spreadsheetId=spreadsheet_id,
+                range=f"'{title}'!A:Z"
+            ).execute()
+            
+            all_data[title] = result.get('values', [])
+            
+        return all_data
+    except Exception as e:
+        raise RuntimeError(f"Failed to fetch data from Google Sheet: {str(e)}")

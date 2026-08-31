@@ -72,6 +72,27 @@ def create_app():
         finally:
             db.close()
 
+    @app.route("/api/user/spreadsheet/data", methods=["GET"])
+    @jwt_required
+    def get_user_spreadsheet_data():
+        user = getattr(request, 'current_user', None)
+        if not user:
+            return jsonify({"error": "Unauthorized"}), 401
+            
+        db = SessionLocal()
+        try:
+            db_user = db.query(User).filter(User.id == user.id).first()
+            if not db_user or not db_user.default_spreadsheet_id:
+                return jsonify({"error": "No spreadsheet associated with this user"}), 404
+            
+            from backend.mcp.google_sheets.tools import get_all_sheets_data
+            data = get_all_sheets_data(db_user.default_spreadsheet_id)
+            return jsonify({"data": data})
+        except Exception as e:
+            return jsonify({"error": str(e)}), 500
+        finally:
+            db.close()
+
     @app.route("/api/auth/google", methods=["POST"])
     def google_auth():
         data = request.json

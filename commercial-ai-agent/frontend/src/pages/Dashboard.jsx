@@ -85,17 +85,18 @@ function Sidebar({ open, onClose, onNewChat, user, onLogout, setView, spreadshee
 
         <div className="sidebar-label mt-4">Accès Rapide</div>
         <div className="mt-1 space-y-0.5">
-          <a
-            href={spreadsheetId ? `https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit` : "#"}
-            target={spreadsheetId ? "_blank" : "_self"}
-            rel="noopener noreferrer"
+          <button
             onClick={(e) => {
               if (!spreadsheetId) {
-                e.preventDefault();
                 toast.error("Aucun tableur Google Sheets créé. Demandez à l'agent de créer un export pour le générer !");
+                return;
+              }
+              setView('sheets');
+              if (window.innerWidth < 768) {
+                onClose();
               }
             }}
-            className={`flex items-center gap-2 rounded-xl px-2 py-2 text-left text-sm transition-colors ${
+            className={`flex w-full items-center gap-2 rounded-xl px-2 py-2 text-left text-sm transition-colors ${
               spreadsheetId 
                 ? "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20" 
                 : "text-zinc-500 cursor-not-allowed"
@@ -103,7 +104,7 @@ function Sidebar({ open, onClose, onNewChat, user, onLogout, setView, spreadshee
           >
             <Table className="size-4 shrink-0" />
             <span className="truncate">Base de Données (Sheets)</span>
-          </a>
+          </button>
         </div>
 
         <div className="sidebar-label mt-4">Récentes</div>
@@ -512,6 +513,135 @@ function AssignmentsPanel() {
   );
 }
 
+function SheetsPanel({ spreadsheetId, user }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [activeSheet, setActiveSheet] = useState(null);
+  const token = localStorage.getItem('auth_token');
+
+  useEffect(() => {
+    let mounted = true;
+    if (!spreadsheetId) {
+      setLoading(false);
+      return;
+    }
+
+    (async () => {
+      try {
+        const r = await fetch(`${API_BASE_URL}/api/user/spreadsheet/data`, {
+          headers: { ...(token ? { Authorization: 'Bearer ' + token } : {}) }
+        });
+        const res = await r.json();
+        
+        if (!r.ok) throw new Error(res.error || "Erreur de chargement des données");
+        
+        if (mounted) {
+          setData(res.data);
+          const keys = Object.keys(res.data || {});
+          if (keys.length > 0) setActiveSheet(keys[0]);
+          setLoading(false);
+        }
+      } catch (e) {
+        if (mounted) {
+          setError(e.message);
+          setLoading(false);
+        }
+      }
+    })();
+
+    return () => { mounted = false; };
+  }, [spreadsheetId, token]);
+
+  if (!spreadsheetId) {
+    return (
+      <div className="flex flex-col items-center justify-center h-[50vh] text-zinc-400">
+        <Table className="size-12 mb-4 opacity-50" />
+        <h3 className="text-lg font-semibold">Aucun Google Sheets</h3>
+        <p className="text-sm mt-2 text-center max-w-md">
+          Demandez à l'agent de créer un client, un devis ou un rendez-vous pour qu'il génère automatiquement la base de données.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <motion.section initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }} className="h-[calc(100vh-120px)] flex flex-col">
+      <h2 className="mb-4 text-2xl font-bold bg-gradient-to-r from-emerald-400 to-emerald-200 bg-clip-text text-transparent flex items-center justify-between">
+        Base de Données
+        <a href={`https://docs.google.com/spreadsheets/d/${spreadsheetId}/edit?authuser=${user?.email || ''}`} target="_blank" rel="noopener noreferrer" className="btn text-xs px-3 py-1.5 h-auto border-emerald-500/30 hover:bg-emerald-500/10 text-emerald-400 transition-colors">
+          Ouvrir dans Google Sheets
+        </a>
+      </h2>
+
+      {loading ? (
+        <div className="glass-panel flex-1 flex flex-col items-center justify-center gap-3 text-zinc-500">
+          <span className="grid size-10 place-items-center rounded-full bg-emerald-500/10 text-emerald-400">
+            <Sparkles className="size-5" />
+          </span>
+          <span className="text-sm animate-pulse">Synchronisation avec Google Sheets...</span>
+        </div>
+      ) : error ? (
+        <div className="glass-panel flex-1 flex flex-col items-center justify-center gap-3 text-red-400">
+          <p>{error}</p>
+        </div>
+      ) : (
+        <div className="glass-panel flex-1 p-0 flex flex-col overflow-hidden rounded-xl border border-white/10">
+          <div className="flex items-center gap-2 border-b border-white/10 bg-black/20 p-2 overflow-x-auto scrollbar-hide">
+            {Object.keys(data || {}).map(sheetName => (
+              <button
+                key={sheetName}
+                onClick={() => setActiveSheet(sheetName)}
+                className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${
+                  activeSheet === sheetName 
+                    ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" 
+                    : "text-zinc-400 hover:text-zinc-200 hover:bg-white/5 border border-transparent"
+                }`}
+              >
+                {sheetName}
+              </button>
+            ))}
+          </div>
+          
+          <div className="flex-1 overflow-auto p-4">
+            {activeSheet && data[activeSheet] && data[activeSheet].length > 0 ? (
+              <div className="inline-block min-w-full align-middle">
+                <table className="min-w-full divide-y divide-white/10">
+                  <thead>
+                    <tr>
+                      {data[activeSheet][0].map((header, idx) => (
+                        <th key={idx} className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-emerald-500/80 bg-black/20 whitespace-nowrap">
+                          {header}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {data[activeSheet].slice(1).map((row, rowIdx) => (
+                      <tr key={rowIdx} className="hover:bg-white/[0.02] transition-colors">
+                        {/* Ensure we map exactly the header length in case of missing cells */}
+                        {data[activeSheet][0].map((_, colIdx) => (
+                          <td key={colIdx} className="px-4 py-3 text-sm text-zinc-300 whitespace-nowrap">
+                            {row[colIdx] || ''}
+                          </td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="h-full flex items-center justify-center text-zinc-500 text-sm">
+                Cette feuille est vide.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </motion.section>
+  );
+}
+
 export default function Dashboard({ user, onLogout }) {
   const [prompt, setPrompt] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -719,6 +849,7 @@ export default function Dashboard({ user, onLogout }) {
                 {activeView === 'quotes' && <QuotesPanel />}
                 {activeView === 'invoices' && <InvoicesPanel />}
                 {activeView === 'assignments' && <AssignmentsPanel />}
+                {activeView === 'sheets' && <SheetsPanel spreadsheetId={spreadsheetId} user={user} />}
               </div>
             )}
           </div>

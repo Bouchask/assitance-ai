@@ -95,7 +95,16 @@ class LangGraphOrchestrator:
                 if res.get("success"):
                     previous_context += f"- Step {step_id}: {res.get('data', {})}\n"
                     
-        intent = self.prompt_engineer.analyze(state["user_input"], previous_context)
+        user_info = ""
+        try:
+            from flask import request
+            current_user = getattr(request, 'current_user', None)
+            if current_user:
+                user_info = f"Name: {current_user.name}, Email: {current_user.email}"
+        except Exception:
+            pass
+
+        intent = self.prompt_engineer.analyze(state["user_input"], previous_context, user_info)
         state["intent"] = intent
         return state
 
