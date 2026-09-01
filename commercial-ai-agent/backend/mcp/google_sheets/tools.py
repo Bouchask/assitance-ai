@@ -59,11 +59,19 @@ def append_row(
             sheet_metadata = service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
             sheets = sheet_metadata.get('sheets', [])
             
+            sheet_id = None
             if sheet_name == "Sheet1" and sheets:
                 sheet_name = sheets[0].get("properties", {}).get("title", "Sheet1")
+                sheet_id = sheets[0].get("properties", {}).get("sheetId")
             else:
                 # Check if the specific sheet_name exists
-                sheet_exists = any(s.get("properties", {}).get("title") == sheet_name for s in sheets)
+                sheet_exists = False
+                for s in sheets:
+                    if s.get("properties", {}).get("title") == sheet_name:
+                        sheet_exists = True
+                        sheet_id = s.get("properties", {}).get("sheetId")
+                        break
+                
                 if not sheet_exists:
                     # Create the sheet
                     add_sheet_request = {
@@ -77,10 +85,82 @@ def append_row(
                             }
                         ]
                     }
-                    service.spreadsheets().batchUpdate(spreadsheetId=spreadsheet_id, body=add_sheet_request).execute()
+                    res = service.spreadsheets().batchUpdate(spreadsheetId=spreadsheet_id, body=add_sheet_request).execute()
+                    try:
+                        sheet_id = res['replies'][0]['addSheet']['properties']['sheetId']
+                    except Exception:
+                        pass
         except Exception as e:
             print(f"Warning checking/creating sheet {sheet_name}: {e}")
             pass # Fallback to whatever was provided
+            
+        # Clean up bad rows, check headers, and prevent duplicates
+        try:
+            range_name_full = f"'{sheet_name}'!A:Z"
+            existing_data_res = service.spreadsheets().values().get(
+                spreadsheetId=spreadsheet_id,
+                range=range_name_full
+            ).execute()
+            existing_data = existing_data_res.get('values', [])
+            
+            requests = []
+            
+            # Clean up bad rows
+            for i in range(len(existing_data)-1, -1, -1):
+                row = existing_data[i]
+                is_bad = any(isinstance(cell, str) and ('{{' in cell or cell == 'Current Date' or cell == 'Current Date Logged Here' or cell == 'Current Date') for cell in row)
+                if is_bad:
+                    if sheet_id is not None:
+                        requests.append({
+                            "deleteDimension": {
+                                "range": {
+                                    "sheetId": sheet_id,
+                                    "dimension": "ROWS",
+                                    "startIndex": i,
+                                    "endIndex": i + 1
+                                }
+                            }
+                        })
+                    existing_data.pop(i)
+            
+            if requests:
+                service.spreadsheets().batchUpdate(spreadsheetId=spreadsheet_id, body={"requests": requests}).execute()
+            
+            # Add headers if empty
+            if not existing_data:
+                headers = []
+                if sheet_name == "Clients":
+                    headers = ["Date", "Nom", "Email"]
+                elif sheet_name == "Factures":
+                    headers = ["Date", "Client ID", "Services", "Quantités", "Total HT", "TVA", "Total TTC", "Remise (%)"]
+                elif sheet_name == "Meetings":
+                    headers = ["Date", "Titre", "Heure de début", "Invités"]
+                else:
+                    headers = ["Date", "Info 1", "Info 2"]
+                
+                service.spreadsheets().values().append(
+                    spreadsheetId=spreadsheet_id, 
+                    range=f"'{sheet_name}'!A:A",
+                    valueInputOption="USER_ENTERED", 
+                    body={'values': [headers]}
+                ).execute()
+                existing_data.append(headers)
+
+            # Prevent duplicate clients
+            if sheet_name == "Clients" and len(values) >= 3:
+                new_email = str(values[2]).strip().lower()
+                for row in existing_data:
+                    if len(row) >= 3 and str(row[2]).strip().lower() == new_email:
+                        link = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}/edit"
+                        if current_user and current_user.email: link += f"?authuser={current_user.email}"
+                        return {
+                            "status": "success",
+                            "message": f"Client {new_email} already exists in Sheets, skipped append.",
+                            "spreadsheet_id": spreadsheet_id,
+                            "link": link
+                        }
+        except Exception as e:
+            print(f"Error in data cleanup/checks for {sheet_name}: {e}")
                 
         # Quote the sheet name in case it has spaces
         range_name = f"'{sheet_name}'!A:A"

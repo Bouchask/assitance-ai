@@ -57,7 +57,7 @@ class PlannerAgent:
         - Automatic Google Sheets Logging:
           - If you use 'db.find_or_create_client', you MUST add a step using 'google.sheets.append_row' with sheet_name="Clients" to log the client info. (e.g. values: [Current Date, Client Name, Email]).
           - If you use 'google.calendar.create_meeting', you MUST add a step using 'google.sheets.append_row' with sheet_name="Meetings" to log the meeting. (e.g. values: [Current Date, Title, Start Time, Attendees]).
-          - If you use 'db.create_quote', you MUST add a step using 'google.sheets.append_row' with sheet_name="Factures" to log the quote/invoice. (e.g. values: [Current Date, Client ID/Name, Total HT, Total TTC]).
+          - If you use 'db.create_quote', you MUST add a step using 'google.sheets.append_row' with sheet_name="Factures" to log the quote/invoice with advanced details. (e.g. values: ["Current Date", "{{step1.id}}", "Services list", "Quantities", "{{stepN.total_ht}}", "{{stepN.tax}}", "{{stepN.total_ttc}}", "{{stepN.discount_percent_val}}%"]). Ensure the services and quantities are strings summarizing the items.
           - Always set 'spreadsheet_id' to null (omit it or leave empty string) so it auto-creates or uses the default.
         - Ensure arguments match the expected schema for the tools.
         - All 'client_id', 'quote_id', and 'reference_id' arguments MUST be integers (e.g. 5, not "QTE-123").

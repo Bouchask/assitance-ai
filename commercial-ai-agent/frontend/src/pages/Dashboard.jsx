@@ -645,7 +645,7 @@ function SheetsPanel({ spreadsheetId, user }) {
                     {data[activeSheet].slice(1).map((row, rowIdx) => (
                       <tr key={rowIdx} className="hover:bg-md-primary/5 transition-colors duration-200">
                         {data[activeSheet][0].map((_, colIdx) => (
-                          <td key={colIdx} className="px-4 py-3 text-sm text-md-on-surface whitespace-nowrap">
+                          <td key={colIdx} className="px-4 py-3 text-sm text-md-on-surface truncate max-w-[150px] sm:max-w-[250px] md:max-w-[350px]" title={row[colIdx] || ''}>
                             {row[colIdx] || ''}
                           </td>
                         ))}
