@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bot, LogIn, Sparkles } from 'lucide-react';
+import { LogIn, Sparkles } from 'lucide-react';
 import { useGoogleLogin } from '@react-oauth/google';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || "";
@@ -71,29 +71,37 @@ export default function Login({ onLoginSuccess }) {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#212121] px-4">
-      <div className="w-full max-w-[400px]">
+    <div className="relative flex min-h-screen items-center justify-center bg-md-background px-4 overflow-hidden">
+      {/* ── Organic Blur Shapes (MD3 signature) ── */}
+      <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
+        <div className="absolute -top-32 -right-32 size-[500px] rounded-full bg-md-primary-container/40 blur-3xl" />
+        <div className="absolute -bottom-40 -left-40 size-[600px] rounded-[100px] rounded-tr-[20px] bg-md-tertiary-container/30 blur-3xl" />
+        <div className="absolute top-1/3 left-1/4 size-80 rounded-full bg-md-secondary-container/25 blur-3xl" />
+      </div>
+
+      <div className="relative z-10 w-full max-w-[420px]">
         
         {/* Header */}
-        <div className="mb-10 text-center">
-          <div className="mx-auto mb-4 grid size-12 place-items-center rounded-xl bg-zinc-100 text-zinc-900 shadow-xl">
-            <Sparkles className="size-6" />
+        <div className="mb-8 text-center">
+          <div className="mx-auto mb-5 grid size-14 place-items-center rounded-2xl bg-md-primary text-white shadow-md">
+            <Sparkles className="size-7" />
           </div>
-          <h1 className="text-2xl font-semibold text-zinc-100">Bienvenue</h1>
-          <p className="mt-2 text-sm text-zinc-400">Connectez-vous pour accéder à Commercial AI</p>
+          <h1 className="text-3xl font-medium text-md-on-background tracking-tight">Bienvenue</h1>
+          <p className="mt-2 text-sm text-md-on-surface-variant">Connectez-vous pour accéder à Commercial AI</p>
         </div>
 
-        {/* Form */}
-        <div className="rounded-2xl border border-white/[0.07] bg-[#171717] p-8 shadow-2xl">
+        {/* Card */}
+        <div className="rounded-[28px] bg-md-surface-container p-8 shadow-md">
           <form onSubmit={handleSubmit} className="space-y-5">
             {error && (
-              <div className="rounded-xl bg-red-500/10 p-3 text-sm text-red-500 border border-red-500/20">
+              <div className="rounded-2xl bg-md-error/10 p-3.5 text-sm text-md-error font-medium">
                 {error}
               </div>
             )}
             
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-zinc-300" htmlFor="email">
+            {/* Email Field (MD3 Filled Text Field) */}
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-md-on-surface-variant tracking-wide" htmlFor="email">
                 Adresse email
               </label>
               <input
@@ -103,12 +111,13 @@ export default function Login({ onLoginSuccess }) {
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="admin@atlas.com"
                 required
-                className="w-full rounded-xl border border-white/[0.07] bg-black/20 px-4 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-emerald-500/50 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-colors"
+                className="input"
               />
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-zinc-300" htmlFor="password">
+            {/* Password Field */}
+            <div className="space-y-1">
+              <label className="text-xs font-medium text-md-on-surface-variant tracking-wide" htmlFor="password">
                 Mot de passe
               </label>
               <input
@@ -118,14 +127,15 @@ export default function Login({ onLoginSuccess }) {
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
                 required
-                className="w-full rounded-xl border border-white/[0.07] bg-black/20 px-4 py-2.5 text-sm text-zinc-100 placeholder:text-zinc-600 focus:border-emerald-500/50 focus:outline-none focus:ring-1 focus:ring-emerald-500/50 transition-colors"
+                className="input"
               />
             </div>
 
+            {/* Submit Button (MD3 Filled Pill) */}
             <button
               type="submit"
               disabled={isLoading || isGoogleLoading || !email || !password}
-              className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-medium text-white transition-all hover:bg-emerald-500 disabled:opacity-50 disabled:hover:bg-emerald-600"
+              className="mt-3 flex w-full items-center justify-center gap-2 rounded-full bg-md-primary px-5 py-3.5 text-sm font-medium text-md-on-primary shadow-sm transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] hover:bg-md-primary/90 hover:shadow-md disabled:opacity-50 disabled:hover:shadow-sm active:scale-95"
             >
               {isLoading ? (
                 <span className="thinking-dots"><i /><i /><i /></span>
@@ -138,17 +148,19 @@ export default function Login({ onLoginSuccess }) {
             </button>
           </form>
 
-          <div className="my-6 flex items-center justify-center space-x-2">
-            <div className="h-px w-full bg-white/[0.05]"></div>
-            <span className="text-xs font-medium text-zinc-500 uppercase tracking-wider">OU</span>
-            <div className="h-px w-full bg-white/[0.05]"></div>
+          {/* Divider */}
+          <div className="my-7 flex items-center justify-center space-x-3">
+            <div className="h-px w-full bg-md-outline-variant"></div>
+            <span className="text-xs font-medium text-md-on-surface-variant uppercase tracking-wider whitespace-nowrap">ou</span>
+            <div className="h-px w-full bg-md-outline-variant"></div>
           </div>
 
+          {/* Google Button (MD3 Outlined Pill) */}
           <button
             type="button"
             onClick={() => googleLogin()}
             disabled={isLoading || isGoogleLoading}
-            className="flex w-full items-center justify-center gap-3 rounded-xl border border-white/[0.07] bg-black/20 px-4 py-3 text-sm font-medium text-zinc-200 transition-all hover:bg-white/[0.03] disabled:opacity-50"
+            className="flex w-full items-center justify-center gap-3 rounded-full border border-md-outline px-5 py-3.5 text-sm font-medium text-md-on-surface transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] hover:bg-md-primary/5 disabled:opacity-50 active:scale-95"
           >
             {isGoogleLoading ? (
               <span className="thinking-dots"><i /><i /><i /></span>

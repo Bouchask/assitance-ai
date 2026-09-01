@@ -431,7 +431,15 @@ class ExecutionEngine:
             
             # Field Fallback Logic
             if field not in data:
-                if field.endswith('_id') and 'id' in data:
+                # Common aliases
+                field_aliases = {
+                    'total_tax': 'tax',
+                    'tax': 'total_tax',
+                    'total': 'total_ttc',
+                }
+                if field in field_aliases and field_aliases[field] in data:
+                    field = field_aliases[field]
+                elif field.endswith('_id') and 'id' in data:
                     field = 'id'
                 else:
                     raise ValueError(f"Field '{field}' not found in step {step_num} results")
@@ -456,9 +464,16 @@ class ExecutionEngine:
             except (ValueError, AttributeError):
                 data = {}
             
-            # Fallback for ID fields mapping
+            # Fallback for field aliases and ID fields mapping
             if field not in data:
-                if field.endswith('_id') and 'id' in data:
+                field_aliases = {
+                    'total_tax': 'tax',
+                    'tax': 'total_tax',
+                    'total': 'total_ttc',
+                }
+                if field in field_aliases and field_aliases[field] in data:
+                    field = field_aliases[field]
+                elif field.endswith('_id') and 'id' in data:
                     field = 'id'
                     
             if field not in data:

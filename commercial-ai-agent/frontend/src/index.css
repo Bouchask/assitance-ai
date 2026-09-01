@@ -2,93 +2,158 @@
 @plugin "@tailwindcss/typography";
 
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-  --color-brand: #10b981;
-  --color-brand-hover: #059669;
+  --font-sans: "Roboto", ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  /* ── Material You Tonal Palette (Purple seed #6750A4) ── */
+  --color-md-primary: #6750A4;
+  --color-md-on-primary: #FFFFFF;
+  --color-md-primary-container: #EADDFF;
+  --color-md-on-primary-container: #21005D;
+  --color-md-secondary: #625B71;
+  --color-md-secondary-container: #E8DEF8;
+  --color-md-on-secondary-container: #1D192B;
+  --color-md-tertiary: #7D5260;
+  --color-md-tertiary-container: #FFD8E4;
+  --color-md-on-tertiary-container: #31111D;
+  --color-md-background: #FFFBFE;
+  --color-md-on-background: #1C1B1F;
+  --color-md-surface: #FFFBFE;
+  --color-md-on-surface: #1C1B1F;
+  --color-md-surface-container: #F3EDF7;
+  --color-md-surface-container-low: #E7E0EC;
+  --color-md-surface-container-high: #ECE6F0;
+  --color-md-on-surface-variant: #49454F;
+  --color-md-outline: #79747E;
+  --color-md-outline-variant: #CAC4D0;
+  --color-md-error: #B3261E;
+  --color-md-success: #386A20;
 }
 
 @layer base {
   * { box-sizing: border-box; }
-  html { background: #121212; }
-  body { 
-    margin: 0; min-width: 320px; 
-    background: #121212; 
-    color: #e5e7eb; 
-    font-family: var(--font-sans); 
-    -webkit-font-smoothing: antialiased; 
-    background-image: radial-gradient(circle at 50% -20%, #1c3228, transparent 40%),
-                      radial-gradient(circle at -20% 50%, rgba(20,20,20,1), transparent 50%);
-    background-attachment: fixed;
+  html { background: var(--color-md-background); }
+  body {
+    margin: 0; min-width: 320px;
+    background: var(--color-md-background);
+    color: var(--color-md-on-background);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
   }
   button { cursor: pointer; }
-  button:disabled { cursor: not-allowed; opacity: 0.6; }
-  ::selection { background: rgba(16, 185, 129, .35); }
+  button:disabled { cursor: not-allowed; opacity: 0.5; }
+  ::selection { background: rgba(103, 80, 164, .25); }
 }
 
 @layer components {
-  /* Layout & Sidebar */
-  .icon-button { @apply grid size-8 place-items-center rounded-lg text-zinc-400 transition-all duration-200 hover:bg-white/[0.08] hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70 active:scale-95; }
-  .new-chat-button { @apply mt-3 flex w-full items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500/10 to-emerald-400/5 px-3 py-2.5 text-sm font-medium text-emerald-100 border border-emerald-500/20 transition-all duration-300 hover:bg-emerald-500/20 hover:border-emerald-500/40 hover:shadow-[0_0_15px_rgba(16,185,129,0.15)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400/70 active:scale-[0.98]; }
-  .sidebar-label { @apply px-2 py-2 text-[11px] font-semibold uppercase tracking-wider text-zinc-500; }
-  .sidebar-chat { @apply flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-sm font-medium text-zinc-400 transition-all duration-200 hover:bg-white/[0.06] hover:text-zinc-200 active:scale-[0.98]; }
-  .sidebar-chat-active { @apply bg-white/[0.08] text-white shadow-[inset_2px_0_0_rgba(16,185,129,0.8)]; }
-  
-  /* Chat Composer */
-  .composer-shell { @apply flex items-end gap-1 rounded-[1.65rem] border border-white/[0.11] bg-black/40 backdrop-blur-xl px-2 py-1.5 shadow-[0_8px_30px_rgba(0,0,0,0.4)] transition-all duration-300 focus-within:border-emerald-500/50 focus-within:bg-black/60 focus-within:shadow-[0_0_20px_rgba(16,185,129,0.1)]; }
-  .send-button { @apply mb-1 grid size-9 shrink-0 place-items-center rounded-full bg-emerald-500 text-white transition-all hover:bg-emerald-400 hover:shadow-[0_0_10px_rgba(16,185,129,0.4)] disabled:bg-zinc-800 disabled:text-zinc-500 disabled:shadow-none active:scale-95; }
-  .suggestion-card { @apply flex min-h-24 items-start justify-between gap-3 rounded-xl border border-white/[0.09] bg-white/[0.025] backdrop-blur-sm p-3 text-left text-sm leading-5 text-zinc-300 transition-all duration-300 hover:-translate-y-1 hover:border-emerald-500/30 hover:bg-white/[0.06] hover:text-white hover:shadow-[0_5px_15px_rgba(0,0,0,0.3)]; }
-  
-  /* Cards & Approvals */
-  .approval-card { @apply mt-5 rounded-2xl border border-amber-500/30 bg-amber-500/5 p-4 shadow-[0_0_20px_rgba(245,158,11,0.05)]; }
-  .approval-payload { @apply mt-3 max-h-44 overflow-auto rounded-xl border border-white/[0.07] bg-black/40 p-3 text-xs leading-5 text-zinc-400; }
-  
-  /* Forms & Buttons for Dashboard */
-  .input { @apply w-full rounded-xl border border-white/10 bg-black/30 px-3 py-2 text-sm text-white placeholder-zinc-500 outline-none backdrop-blur-md transition-all focus:border-emerald-500/50 focus:bg-black/50 focus:ring-1 focus:ring-emerald-500/50; }
-  .btn { @apply inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/5 px-4 py-2 text-sm font-medium text-zinc-200 transition-all hover:bg-white/10 hover:text-white active:scale-95; }
-  .btn-primary { @apply inline-flex items-center justify-center gap-2 rounded-xl border border-transparent bg-emerald-600 px-4 py-2 text-sm font-medium text-white shadow-lg transition-all hover:bg-emerald-500 hover:shadow-[0_0_15px_rgba(16,185,129,0.4)] active:scale-95; }
-  .btn-danger { @apply inline-flex items-center justify-center gap-2 rounded-xl border border-transparent bg-red-600/80 px-4 py-2 text-sm font-medium text-white transition-all hover:bg-red-500 hover:shadow-[0_0_15px_rgba(239,68,68,0.4)] active:scale-95; }
-  
-  /* Glass Panels */
-  .glass-panel { @apply rounded-2xl border border-white/5 bg-white/[0.02] p-5 shadow-2xl backdrop-blur-xl transition-all duration-300; }
-  .list-item-glass { @apply flex flex-col gap-1 rounded-xl border border-white/[0.04] bg-white/[0.03] p-4 transition-all duration-300 hover:bg-white/[0.06] hover:border-white/10; }
+  /* ── Icon Buttons ── */
+  .icon-button {
+    @apply grid size-9 place-items-center rounded-full text-md-on-surface-variant transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] hover:bg-md-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-md-primary focus-visible:ring-offset-2 active:scale-95;
+  }
+
+  /* ── New Chat (MD3 Filled Tonal Button) ── */
+  .new-chat-button {
+    @apply mt-3 flex w-full items-center gap-2.5 rounded-full bg-md-primary px-5 py-3 text-sm font-medium text-md-on-primary shadow-sm transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] hover:bg-md-primary/90 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-md-primary focus-visible:ring-offset-2 active:scale-95;
+  }
+
+  /* ── Sidebar Labels ── */
+  .sidebar-label {
+    @apply px-3 py-2 text-[11px] font-medium uppercase tracking-wider text-md-on-surface-variant;
+  }
+
+  /* ── Sidebar Navigation Items ── */
+  .sidebar-chat {
+    @apply flex w-full items-center gap-3 rounded-full px-3 py-2.5 text-left text-sm font-medium text-md-on-surface-variant transition-all duration-200 ease-[cubic-bezier(0.2,0,0,1)] hover:bg-md-secondary-container/60 active:scale-[0.98];
+  }
+  .sidebar-chat-active {
+    @apply bg-md-secondary-container text-md-on-secondary-container font-medium;
+  }
+
+  /* ── Chat Composer ── */
+  .composer-shell {
+    @apply flex items-end gap-1.5 rounded-[1.75rem] border border-md-outline-variant bg-md-surface-container px-3 py-2 shadow-sm transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] focus-within:border-md-primary focus-within:shadow-md;
+  }
+  .send-button {
+    @apply mb-1 grid size-10 shrink-0 place-items-center rounded-2xl bg-md-tertiary text-white shadow-md transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] hover:bg-md-tertiary/90 hover:shadow-lg disabled:bg-md-surface-container-low disabled:text-md-outline disabled:shadow-none active:scale-95;
+  }
+  .suggestion-card {
+    @apply flex min-h-24 items-start justify-between gap-3 rounded-3xl border border-md-outline-variant/50 bg-md-surface-container p-4 text-left text-sm leading-5 text-md-on-surface-variant shadow-sm transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] hover:shadow-md hover:scale-[1.02] hover:bg-md-surface-container-high active:scale-[0.98];
+  }
+
+  /* ── Approval Card ── */
+  .approval-card {
+    @apply mt-5 rounded-3xl border border-md-tertiary/30 bg-md-tertiary-container/20 p-5 shadow-sm;
+  }
+  .approval-payload {
+    @apply mt-3 max-h-44 overflow-auto rounded-2xl border border-md-outline-variant/50 bg-md-surface-container p-3 text-xs leading-5 text-md-on-surface-variant;
+  }
+
+  /* ── MD3 Inputs (Filled Text Field) ── */
+  .input {
+    @apply w-full rounded-t-xl rounded-b-none border-b-2 border-md-outline bg-md-surface-container-low px-4 py-3 text-sm text-md-on-surface placeholder-md-on-surface-variant/50 outline-none transition-all duration-200 focus:border-md-primary focus:bg-md-surface-container;
+  }
+
+  /* ── MD3 Buttons (Pill-shaped) ── */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-md-outline-variant bg-transparent px-5 py-2.5 text-sm font-medium text-md-primary transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] hover:bg-md-primary/10 active:scale-95 focus-visible:ring-2 focus-visible:ring-md-primary focus-visible:ring-offset-2;
+  }
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-transparent bg-md-primary px-5 py-2.5 text-sm font-medium text-md-on-primary shadow-sm transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] hover:bg-md-primary/90 hover:shadow-md active:scale-95 focus-visible:ring-2 focus-visible:ring-md-primary focus-visible:ring-offset-2;
+  }
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 rounded-full border border-transparent bg-md-error px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] hover:bg-md-error/90 hover:shadow-md active:scale-95;
+  }
+
+  /* ── MD3 Surface Cards ── */
+  .glass-panel {
+    @apply rounded-3xl bg-md-surface-container p-6 shadow-sm transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)];
+  }
+  .list-item-glass {
+    @apply flex flex-col gap-1 rounded-3xl bg-md-surface-container p-5 shadow-sm transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)] hover:shadow-md hover:scale-[1.02];
+  }
 }
 
-.chat-scroll { scrollbar-color: #555 transparent; scrollbar-width: thin; }
-.chat-scroll::-webkit-scrollbar, .approval-payload::-webkit-scrollbar { width: 8px; }
-.chat-scroll::-webkit-scrollbar-thumb, .approval-payload::-webkit-scrollbar-thumb { border: 2px solid transparent; border-radius: 999px; background: #555; background-clip: padding-box; }
+/* ── Scrollbar (light mode) ── */
+.chat-scroll { scrollbar-color: var(--color-md-outline-variant) transparent; scrollbar-width: thin; }
+.chat-scroll::-webkit-scrollbar, .approval-payload::-webkit-scrollbar { width: 6px; }
+.chat-scroll::-webkit-scrollbar-thumb, .approval-payload::-webkit-scrollbar-thumb { border: 2px solid transparent; border-radius: 999px; background: var(--color-md-outline-variant); background-clip: padding-box; }
 
+/* ── Agent Markdown (light mode) ── */
 .agent-markdown > :first-child, .agent-markdown p:first-child { margin-top: 0; }
 .agent-markdown > :last-child, .agent-markdown p:last-child { margin-bottom: 0; }
 .agent-markdown p { margin: .25rem 0 .85rem; }
 .agent-markdown ul, .agent-markdown ol { margin: .45rem 0 .9rem; padding-left: 1.35rem; }
 .agent-markdown li { padding-left: .15rem; }
-.agent-markdown code { border-radius: .35rem; background: rgba(255,255,255,.09); padding: .12rem .32rem; font-size: .85em; }
-.agent-markdown blockquote { margin: .75rem 0; border-left: 2px solid #emerald-500/50; padding-left: .85rem; color: #a1a1aa; background: rgba(16,185,129,0.05); border-radius: 0 0.5rem 0.5rem 0; }
+.agent-markdown code { border-radius: .5rem; background: var(--color-md-surface-container-low); padding: .15rem .4rem; font-size: .85em; color: var(--color-md-primary); }
+.agent-markdown blockquote { margin: .75rem 0; border-left: 3px solid var(--color-md-primary); padding-left: .85rem; color: var(--color-md-on-surface-variant); background: var(--color-md-primary-container/15); border-radius: 0 .75rem .75rem 0; padding: .5rem .85rem; }
 .agent-markdown a {
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  padding: 0.35rem 0.75rem;
-  margin: 0.5rem 0;
-  background: rgba(16, 185, 129, 0.1);
-  border: 1px solid rgba(16, 185, 129, 0.3);
-  border-radius: 0.5rem;
-  color: #34d399;
+  padding: 0.35rem 0.85rem;
+  margin: 0.4rem 0;
+  background: var(--color-md-primary-container);
+  border: none;
+  border-radius: 9999px;
+  color: var(--color-md-on-primary-container);
   text-decoration: none;
   font-weight: 500;
   font-size: 0.85em;
-  transition: all 0.2s ease;
-  word-break: break-all;
+  transition: all 0.3s cubic-bezier(0.2, 0, 0, 1);
 }
 .agent-markdown a:hover {
-  background: rgba(16, 185, 129, 0.2);
-  border-color: rgba(16, 185, 129, 0.5);
-  color: #6ee7b7;
+  background: var(--color-md-primary);
+  color: var(--color-md-on-primary);
   transform: translateY(-1px);
-  shadow: 0 4px 12px rgba(16, 185, 129, 0.15);
+  box-shadow: 0 4px 12px rgba(103, 80, 164, 0.25);
 }
 
+/* ── Thinking Dots ── */
 .thinking-dots { display: inline-flex; gap: 4px; }
-.thinking-dots i { width: 5px; height: 5px; border-radius: 50%; background: #a1a1aa; animation: typing 1.2s infinite ease-in-out; }
+.thinking-dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--color-md-primary); animation: typing 1.2s infinite ease-in-out; }
 .thinking-dots i:nth-child(2) { animation-delay: .15s; }.thinking-dots i:nth-child(3) { animation-delay: .3s; }
-@keyframes typing { 0%, 60%, 100% { transform: translateY(0); opacity: .35; } 30% { transform: translateY(-4px); opacity: 1; } }
+@keyframes typing { 0%, 60%, 100% { transform: translateY(0); opacity: .3; } 30% { transform: translateY(-5px); opacity: 1; } }
+
+/* ── Reduced Motion ── */
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}

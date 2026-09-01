@@ -39,16 +39,17 @@ class PlannerAgent:
         - PAY CLOSE ATTENTION to durations requested by the user. If the Intent 'requirements' has a 'duration_months' (e.g. 12) and the catalogue service has a fixed duration (like "MAINT-6" which is 6 months), YOU MUST DIVIDE: 12 / 6 = 2! You MUST then set the quantity in the 'quantities' argument to this calculated multiplier (e.g., {"MAINT-6": 2}). DO NOT skip a service and DO NOT leave the quantity as 1!
         - IMPORTANT: If you adjusted a quantity to match a duration (like the 12 months maintenance example above), you MUST ALSO pass a 'custom_descriptions' dictionary to 'utils.prepare_quote_items' to override the default catalogue name on the invoice (e.g., {"MAINT-6": "12 Months Maintenance"}) so the client sees exactly what they asked for!
         - Use only actual catalogue codes returned by the tool descriptions: WEB-ECOMM, MAINT-6, SEO-OPT. Never invent a price or a service.
-        - To reference output from a previous step, you MUST use the EXACT ID of the step that produced it. Use the format "{{stepN.key}}", where N is the integer ID of the step.
-          - Example: If db.find_or_create_client is step 4, you MUST use "{{step4.id}}" to get the client_id. DO NOT use "{{step5.id}}" or "{{4.id}}".
-          - Example: If utils.prepare_quote_items is step 5, you MUST use "{{step5.items}}", "{{step5.total_ht}}", etc.
-          - E.g. use "{{stepN.id}}" or "{{stepN.name}}" for db.find_or_create_client.
-          - E.g. use "{{stepN.items}}", "{{stepN.tax}}", or "{{stepN.total_ttc}}" for utils.prepare_quote_items.
-          - E.g. use "{{stepN.quote_id}}" for db.create_quote.
-          - E.g. use "{{stepN.file_path}}" for document.generate.
-          - E.g. use "{{stepN.result}}" ONLY for utils.calculate.
-          - Make sure to map "{{stepN.original_subtotal}}", "{{stepN.discount_amount}}", and "{{stepN.discount_percent_val}}" to document.generate if available.
+        - PLACEHOLDER FORMAT: To reference output from a previous step, you MUST use EXACTLY this format: "{{stepN.key}}" where N is the integer step ID. The word "step" is MANDATORY.
+          - CORRECT: "{{step1.id}}", "{{step3.items}}", "{{step3.total_ht}}"
+          - WRONG: "{{1.id}}", "{{3.items}}", "{{items}}"
+          - CRITICAL: You MUST reference the correct step! The client_id comes from the db.find_or_create_client step (use "{{step1.id}}" if that was step 1). The items/totals come from the utils.prepare_quote_items step. The quote_id comes from the db.create_quote step. DO NOT mix them up!
+          - For utils.prepare_quote_items output, the available fields are: items, total_ht, tax (NOT total_tax!), total_ttc, original_subtotal, discount_amount, discount_percent_val
+          - For db.find_or_create_client output: id, name, email
+          - For db.create_quote output: quote_id
+          - For document.generate output: file_path
           - CRITICAL: Even if the tool's input schema says a field expects an 'array' or 'object' (like the 'items' field in db.create_quote), if you are passing a placeholder, you MUST pass it as a raw string! NEVER wrap the placeholder in an array or object. Correct: "items": "{{step2.items}}". Incorrect: "items": ["{{step2.items}}"].
+          - For db.create_quote, the 'total_tax' argument must be mapped from prepare_quote_items' 'tax' field: "total_tax": "{{stepN.tax}}"
+        - CONCRETE EXAMPLE: If db.find_or_create_client is step 1, google.sheets.append_row is step 2, utils.prepare_quote_items is step 3, then db.create_quote step 4 should look like: {"client_id": "{{step1.id}}", "items": "{{step3.items}}", "total_ht": "{{step3.total_ht}}", "total_tax": "{{step3.tax}}", "total_ttc": "{{step3.total_ttc}}"}
         - For document.generate, ALWAYS omit the "template_name" argument so it uses the system default, or pass exactly "b2b" if required.
         - For 'email.prepare', you MUST provide 'to', 'subject', and 'body' arguments! If 'client_email' is in the Intent, use it for 'to'. You MUST invent an appropriate professional 'subject' and 'body' yourself.
         - For 'google.calendar.check_availability', you MUST execute this BEFORE 'google.calendar.create_meeting' to find a free slot. Determine a target date (use 'meeting_date' from the Intent if present, otherwise default to Current Date + 10 days) and set 'date_start' to 08:00:00 of that day, and 'date_end' to 18:00:00 of that day (in ISO 8601).
